@@ -306,7 +306,19 @@ class MockAsyncMongoCollection:
             # Handle $set operator
             if "$set" in update:
                 for key, value in update["$set"].items():
-                    doc_to_update[key] = value
+                    # Handle nested fields (e.g., "stats.views")
+                    if "." in key:
+                        parts = key.split(".")
+                        current = doc_to_update
+                        # Navigate to the nested object
+                        for part in parts[:-1]:
+                            if part not in current:
+                                current[part] = {}
+                            current = current[part]
+                        # Set the value in the nested object
+                        current[parts[-1]] = value
+                    else:
+                        doc_to_update[key] = value
                     
             # Add support for other operators as needed
             
