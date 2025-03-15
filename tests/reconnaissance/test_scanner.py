@@ -1,7 +1,9 @@
 """Tests for the Reconnaissance scanner module."""
 
 import asyncio
+import random
 import socket
+import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -83,6 +85,26 @@ async def port_scanner_service(mock_repositories):
         mock_repositories["target_repo"],
         mock_repositories["port_repo"],
         mock_repositories["service_repo"],
+        scan_rate=0.1,  # Fast scanning for tests
+        jitter=0.05,
+        max_concurrent_scans=5,
+        timeout=0.1,
+        aggressive_mode=False,
+    )
+
+
+@pytest_asyncio.fixture
+async def aggressive_scanner_service(mock_repositories):
+    """Create an aggressive PortScannerService for testing."""
+    return PortScannerService(
+        mock_repositories["target_repo"],
+        mock_repositories["port_repo"],
+        mock_repositories["service_repo"],
+        scan_rate=0.0,
+        jitter=0.0,
+        max_concurrent_scans=100,
+        timeout=0.1,
+        aggressive_mode=True,
     )
 
 
@@ -150,6 +172,23 @@ class TestPortScannerService:
             assert status == PortStatus.FILTERED
 
     @pytest.mark.asyncio
+    async def test_scan_port_with_custom_timeout(self, port_scanner_service):
+        """Test scanning a port with a custom timeout."""
+        mock_socket = MagicMock()
+        mock_socket.connect_ex.return_value = 0
+
+        with patch("socket.socket", return_value=mock_socket):
+            port, status = await port_scanner_service.scan_port(
+                "192.0.2.1", 80, timeout=3.0
+            )
+
+            assert port == 80
+            assert status == PortStatus.OPEN
+            mock_socket.close.assert_called_once()
+            # Verify socket was created with the custom timeout
+            assert mock_socket.settimeout.call_args[0][0] == 3.0
+
+    @pytest.mark.asyncio
     async def test_detect_service_known_port(self, port_scanner_service):
         """Test detecting a service on a known port."""
         # Port 80 is in common_ports dictionary as HTTP
@@ -191,13 +230,109 @@ class TestPortScannerService:
         }
         port_scanner_service.detect_service = AsyncMock(return_value=service_info)
 
-        # Call scan_target
-        result = await port_scanner_service.scan_target(1, [80])
+        # Mock sleep to avoid waiting during tests
+        with patch("asyncio.sleep", AsyncMock()):
+            # Call scan_target
+            result = await port_scanner_service.scan_target(1, [80])
 
-        # Verify target was updated
-        assert result == mock_target
-        target_repo.update_target.assert_called()
+            # Verify target was updated
+            assert result == mock_target
+            target_repo.update_target.assert_called()
 
-        # Verify status was updated
-        last_call_args = target_repo.update_target.call_args_list[-1][1]
-        assert last_call_args["status"] == TargetStatus.COMPLETED
+            # Verify status was updated to COMPLETED
+            status_calls = [
+                call[1].get("status")
+                for call in target_repo.update_target.call_args_list
+                if "status" in call[1]
+            ]
+            assert TargetStatus.COMPLETED in status_calls
+
+            # Verify metadata was updated with scan information
+            metadata_calls = [
+                call[1].get("metadata")
+                for call in target_repo.update_target.call_args_list
+                if "metadata" in call[1]
+            ]
+            assert any(
+                "total_ports_scanned" in metadata
+                for metadata in metadata_calls
+                if metadata
+            )
+            assert any(
+                "scan_completed_at" in metadata
+                for metadata in metadata_calls
+                if metadata
+            )
+
+    @pytest.mark.asyncio
+    async def test_scan_target_rate_limited(
+        self, port_scanner_service, mock_repositories
+    ):
+        """Test scanning a target with rate limiting."""
+        # Set a very small max_concurrent_scans to force batching
+        port_scanner_service.max_concurrent_scans = 2
+        port_scanner_service.aggressive_mode = False
+
+        # Create a list of ports that will require multiple batches
+        test_ports = [80, 443, 8080, 22, 21, 25, 53, 110, 143]
+
+        # Mock scan_port to simulate different port statuses
+        async def mock_scan_port(ip, port, timeout=None):
+            if port == 80:
+                return port, PortStatus.OPEN
+            elif port == 443:
+                return port, PortStatus.OPEN
+            else:
+                return port, PortStatus.CLOSED
+
+        port_scanner_service.scan_port = AsyncMock(side_effect=mock_scan_port)
+
+        # Mock detect_service to return service info
+        service_info = {
+            "service_type": ServiceType.HTTP,
+            "name": "HTTP",
+            "version": "1.1",
+            "banner": "Test Server",
+        }
+        port_scanner_service.detect_service = AsyncMock(return_value=service_info)
+
+        # Mock sleep to avoid waiting during tests
+        sleep_mock = AsyncMock()
+        with patch("asyncio.sleep", sleep_mock):
+            # Call scan_target with multiple ports
+            await port_scanner_service.scan_target(1, test_ports)
+
+            # Verify sleep was called at least once (for rate limiting)
+            assert sleep_mock.called
+
+    @pytest.mark.asyncio
+    async def test_scan_target_aggressive_mode(self, aggressive_scanner_service, mock_repositories):
+        """Test scanning a target in aggressive mode."""
+        # Mock scan_port to simulate different port statuses
+        async def mock_scan_port(ip, port, timeout=None):
+            if port == 80:
+                return port, PortStatus.OPEN
+            elif port == 443:
+                return port, PortStatus.OPEN
+            else:
+                return port, PortStatus.CLOSED
+        
+        aggressive_scanner_service.scan_port = AsyncMock(side_effect=mock_scan_port)
+        
+        # Mock detect_service to return service info
+        service_info = {
+            "service_type": ServiceType.HTTP,
+            "name": "HTTP",
+            "version": "1.1",
+            "banner": "Test Server",
+        }
+        aggressive_scanner_service.detect_service = AsyncMock(return_value=service_info)
+        
+        # Mock sleep to track if it's called
+        sleep_mock = AsyncMock()
+        with patch("asyncio.sleep", sleep_mock):
+            # Call scan_target with multiple ports in aggressive mode
+            await aggressive_scanner_service.scan_target(1, [80, 443, 8080, 22, 21])
+            
+            # Verify sleep was not called (aggressive mode doesn't use rate limiting)
+            assert not sleep_mock.called
