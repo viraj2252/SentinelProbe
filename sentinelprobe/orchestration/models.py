@@ -114,6 +114,9 @@ class Task(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=datetime.utcnow
     )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
     started_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     result: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)

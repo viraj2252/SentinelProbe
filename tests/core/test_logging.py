@@ -73,19 +73,13 @@ class MockSettings:
         self.log_file = log_file
 
 
-@pytest.mark.skip(reason="Needs further investigation")
-def test_configure_logging_with_custom_level(monkeypatch):
+@patch("sentinelprobe.core.logging.logger")
+@patch("sentinelprobe.core.logging.get_settings")
+def test_configure_logging_with_custom_level(mock_get_settings, mock_logger):
     """Test configure_logging with custom level."""
-    # Mock settings
+    # Configure mock settings
     mock_settings = MockSettings(log_level="DEBUG")
-    monkeypatch.setattr(
-        "sentinelprobe.core.config.get_settings",
-        lambda: mock_settings,
-    )
-
-    # Mock loguru logger
-    mock_logger = MagicMock()
-    monkeypatch.setattr("sentinelprobe.core.logging.logger", mock_logger)
+    mock_get_settings.return_value = mock_settings
 
     # Call function
     configure_logging()

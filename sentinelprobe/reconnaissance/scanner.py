@@ -162,6 +162,10 @@ class PortScannerService:
         if timeout is None:
             timeout = self.timeout
 
+        if ip_address is None:
+            logger.error(f"Cannot scan port {port}: IP address is None")
+            return port, PortStatus.CLOSED
+
         try:
             # Create socket
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -198,6 +202,15 @@ class PortScannerService:
         Returns:
             Optional[Dict]: Service information or None if detection fails
         """
+        if ip_address is None:
+            logger.error(f"Cannot detect service on port {port}: IP address is None")
+            return {
+                "service_type": ServiceType.UNKNOWN,
+                "name": "Unknown",
+                "version": "",
+                "banner": "",
+            }
+
         # First, try the advanced service detection
         try:
             service_info = await self.service_detector.detect_service(

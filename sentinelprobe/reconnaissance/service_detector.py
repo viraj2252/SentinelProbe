@@ -138,6 +138,10 @@ class ServiceDetector:
         if timeout is None:
             timeout = self.timeout
 
+        if ip_address is None:
+            logger.debug(f"Cannot grab banner for port {port}: IP address is None")
+            return ""
+
         try:
             # Create socket and set timeout
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -262,6 +266,17 @@ class ServiceDetector:
         Returns:
             Dictionary with service information: service_type, name, version, banner
         """
+        if ip_address is None:
+            logger.debug(f"Cannot detect service on port {port}: IP address is None")
+            return {
+                "service_type": ServiceType.UNKNOWN,
+                "name": "Unknown",
+                "version": "",
+                "banner": "",
+                "port": port,
+                "protocol": protocol,
+            }
+
         result: Dict[str, Union[str, ServiceType, int]] = {
             "service_type": ServiceType.UNKNOWN,
             "name": "Unknown",

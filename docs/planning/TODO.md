@@ -295,13 +295,23 @@ This document outlines the implementation and testing tasks for the SentinelProb
 
 ### Test Fixes
 
-- [ ] Fix `test_create_schema` and `test_drop_schema` in `tests/core/test_migrations.py` (async mocks issue)
-- [ ] Add `updated_at` column to Task model to fix `test_table_columns` test
-- [ ] Add missing `mock_engine` fixture to fix `test_get_applied_migrations` test
-- [ ] Investigate and fix `test_configure_logging_with_custom_level` in `tests/core/test_logging.py`
+- [x] Fix `test_create_schema` and `test_drop_schema` in `tests/core/test_migrations.py` (async mocks issue)
+- [x] Add `updated_at` column to Task model to fix `test_table_columns` test
+- [x] Add missing `mock_engine` fixture to fix `test_get_applied_migrations` test
+- [x] Investigate and fix `test_configure_logging_with_custom_level` in `tests/core/test_logging.py`
 - [x] Ensure all MongoDB tests properly await async functions
 - [x] Fix metadata field naming to use target_metadata and service_metadata for proper type resolution
 - [x] Fix mypy errors in scanner.py by adding checks for None IP addresses
+
+### Recently Completed Fixes
+
+1. Added `updated_at` column to Task model to match Job model style
+2. Fixed `test_create_schema` and `test_drop_schema` by properly mocking SQLAlchemy inspect
+3. Added proper `mock_engine` fixture for `test_get_applied_migrations`
+4. Fixed `test_configure_logging_with_custom_level` by using correct patching approach
+5. Fixed metadata naming consistency in service creation (`service_metadata` vs `metadata`)
+6. Added proper None IP address checks in scanner.py and service_detector.py
+7. Fixed code style issues (trailing whitespace)
 
 ### MVP Completion Status
 

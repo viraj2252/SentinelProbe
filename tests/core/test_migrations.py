@@ -3,6 +3,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+import pytest_asyncio
 
 from sentinelprobe.core.migrations import (
     MigrationManager,
@@ -99,7 +100,6 @@ async def test_table_exists():
         assert not_exists is False
 
 
-@pytest.mark.skip(reason="Needs further investigation")
 @pytest.mark.timeout(5)
 @pytest.mark.asyncio
 async def test_create_schema():
@@ -112,11 +112,12 @@ async def test_create_schema():
     # Set up the mock connection for begin with a proper async context manager
     mock_engine.begin = MagicMock(return_value=AsyncContextManagerMock(mock_conn))
 
-    # Patch get_tables to return different values on each call
-    with patch(
-        "sentinelprobe.core.migrations.get_tables",
-        AsyncMock(side_effect=[[], ["job", "task"]]),
-    ):
+    # Mock inspector and the get_table_names method
+    mock_inspector = MagicMock()
+    mock_inspector.get_table_names = AsyncMock(side_effect=[[], ["job", "task"]])
+
+    # Patch the inspect function to return our mock inspector
+    with patch("sentinelprobe.core.migrations.inspect", return_value=mock_inspector):
         # Call the function with our mock engine
         created_tables = await create_schema(mock_engine)
 
@@ -127,7 +128,6 @@ async def test_create_schema():
         assert "task" in created_tables
 
 
-@pytest.mark.skip(reason="Needs further investigation")
 @pytest.mark.timeout(5)
 @pytest.mark.asyncio
 async def test_drop_schema():
@@ -140,11 +140,12 @@ async def test_drop_schema():
     # Set up the mock connection for begin with a proper async context manager
     mock_engine.begin = MagicMock(return_value=AsyncContextManagerMock(mock_conn))
 
-    # Patch get_tables to return different values on each call
-    with patch(
-        "sentinelprobe.core.migrations.get_tables",
-        AsyncMock(side_effect=[["job", "task"], []]),
-    ):
+    # Mock inspector and the get_table_names method
+    mock_inspector = MagicMock()
+    mock_inspector.get_table_names = AsyncMock(side_effect=[["job", "task"], []])
+
+    # Patch the inspect function to return our mock inspector
+    with patch("sentinelprobe.core.migrations.inspect", return_value=mock_inspector):
         # Call the function with our mock engine
         dropped_tables = await drop_schema(mock_engine)
 
@@ -247,22 +248,32 @@ async def test_foreign_keys():
     assert hasattr(Task, "job"), "Task model missing job relationship"
 
 
-@pytest.mark.skip(reason="Missing mock_engine fixture")
+@pytest_asyncio.fixture
+async def mock_engine():
+    """Create a mock engine for testing."""
+    mock_engine = MagicMock()
+    conn = MockConnection()
+    conn.execute_results["migrations"] = [("migration1.py",), ("migration2.py",)]
+
+    # Create a mock async context manager that returns our mock connection
+    async_context = AsyncContextManagerMock(conn)
+    mock_engine.begin = MagicMock(return_value=async_context)
+
+    return mock_engine
+
+
 @pytest.mark.timeout(5)
 @pytest.mark.asyncio
 async def test_get_applied_migrations(mock_engine):
     """Test getting applied migrations."""
-    # Setup
-    conn = MockConnection()
-    conn.execute_results["migrations"] = [("migration1.py",), ("migration2.py",)]
-
-    mock_engine.begin.return_value.__aenter__.return_value = conn
-
-    # Create migration manager
+    # Create migration manager with our mock engine
     manager = MigrationManager(mock_engine)
 
     # Execute
     result = await manager._get_applied_migrations()
+
+    # Get the connection used in the test
+    conn = mock_engine.begin.return_value.return_value
 
     # Verify
     assert result == {"migration1.py", "migration2.py"}
