@@ -284,7 +284,7 @@ class OrchestrationService:
         Returns:
             TaskResponse: Task response.
         """
-        result = json.loads(task.result) if task.result else None
+        result = task.result if task.result else None
         return TaskResponse(
             id=task.id,
             job_id=task.job_id,
@@ -292,7 +292,6 @@ class OrchestrationService:
             description=task.description,
             status=task.status,
             created_at=task.created_at,
-            updated_at=task.updated_at,
             started_at=task.started_at,
             completed_at=task.completed_at,
             result=result,
