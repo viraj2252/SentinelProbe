@@ -37,7 +37,7 @@ async def test_job_crud_operations(mock_db_dependencies):
             name="Test Job",
             description="Test job description",
             status=JobStatus.PENDING,
-            job_type=JobType.RECONNAISSANCE,
+            job_type=JobType.SCAN,
             target="example.com",
         )
 
@@ -74,12 +74,12 @@ async def test_job_crud_operations(mock_db_dependencies):
 async def test_task_crud_operations(mock_db_dependencies):
     """Test CRUD operations for the Task model."""
     async for session in get_db_session():
-        # Create a new job for the task
+        # Create a job for the task
         job = Job(
             name="Test Job for Task",
-            description="Test job description",
+            description="Test job for task test",
             status=JobStatus.PENDING,
-            job_type=JobType.RECONNAISSANCE,
+            job_type=JobType.SCAN,
             target="example.com",
         )
         session.add(job)
@@ -126,12 +126,12 @@ async def test_task_crud_operations(mock_db_dependencies):
 async def test_job_task_relationship(mock_db_dependencies):
     """Test the relationship between Job and Task models."""
     async for session in get_db_session():
-        # Create a new job
+        # Create a job
         job = Job(
             name="Test Job with Tasks",
-            description="Test job description",
+            description="Test job with related tasks",
             status=JobStatus.PENDING,
-            job_type=JobType.RECONNAISSANCE,
+            job_type=JobType.SCAN,
             target="example.com",
         )
         session.add(job)
