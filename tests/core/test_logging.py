@@ -68,7 +68,7 @@ class MockSettings:
 
     def __init__(self, log_level="INFO", log_file=None):
         """Initialize with custom settings."""
-        self.log_level = log_level
+        self.LOG_LEVEL = log_level
         self.log_file = log_file
 
 
