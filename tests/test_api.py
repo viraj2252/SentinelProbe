@@ -3,9 +3,6 @@
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from unittest.mock import patch, AsyncMock, MagicMock
-
-from tests.conftest import MockAsyncMongoClient
 
 
 @pytest.fixture
@@ -13,7 +10,7 @@ def mock_client():
     """Create a test client with mocked database connections."""
     # Create a simple test app without the lifespan context
     app = FastAPI()
-    
+
     @app.get("/")
     async def root():
         return {
@@ -21,11 +18,11 @@ def mock_client():
             "version": "0.1.0",
             "description": "AI-Powered Penetration Testing System",
         }
-    
+
     @app.get("/api/v1/health")
     async def health_check():
         return {"status": "healthy"}
-    
+
     return TestClient(app)
 
 
@@ -52,4 +49,4 @@ def test_health_check(mock_client: TestClient) -> None:
     response = mock_client.get("/api/v1/health")
     assert response.status_code == 200
     data = response.json()
-    assert data["status"] == "healthy" 
+    assert data["status"] == "healthy"

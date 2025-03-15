@@ -3,4 +3,4 @@
 
 def test_basic() -> None:
     """Basic test to verify testing setup."""
-    assert True 
+    assert True
