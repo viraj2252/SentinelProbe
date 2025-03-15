@@ -75,9 +75,10 @@ class MockSettings:
 def test_configure_logging_with_custom_level(monkeypatch):
     """Test configure_logging with custom level."""
     # Mock settings
+    mock_settings = MockSettings(log_level="DEBUG")
     monkeypatch.setattr(
         "sentinelprobe.core.config.get_settings",
-        lambda: MockSettings(log_level="DEBUG"),
+        lambda: mock_settings,
     )
 
     # Mock loguru logger
@@ -95,6 +96,5 @@ def test_configure_logging_with_custom_level(monkeypatch):
     for call in mock_logger.add.call_args_list:
         args, kwargs = call
         assert "level" in kwargs
-        # The first call should have DEBUG level
-        if mock_logger.add.call_count == 1 or call == mock_logger.add.call_args_list[0]:
-            assert kwargs["level"] == "DEBUG"
+        # The level should match our mock settings
+        assert kwargs["level"] == mock_settings.LOG_LEVEL
