@@ -338,9 +338,10 @@ We have successfully implemented all the core components needed for our MVP:
 
 1. Complete end-to-end integration tests
 2. ✅ Implement some basic reporting capabilities
-3. Create additional scanner plugins for specific service types
+3. ✅ Create additional scanner plugins for specific service types
+   - Added Redis scanner plugin to detect authentication issues, outdated versions, public exposure, and insecure configurations
 4. Enhance the AI decision engine with more sophisticated rules
-5. Fix failing tests in the reconnaissance module
+5. ✅ Fix failing tests in the reconnaissance module
 
 ## Development Guidelines
 
