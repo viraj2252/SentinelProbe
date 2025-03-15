@@ -1,8 +1,7 @@
 """Configuration management for SentinelProbe."""
 
-import os
 from functools import lru_cache
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from dotenv import load_dotenv
 from pydantic import Field, field_validator
@@ -96,4 +95,4 @@ def get_settings() -> Settings:
     Returns:
         Settings: Application settings instance.
     """
-    return Settings() 
+    return Settings()

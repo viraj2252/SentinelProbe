@@ -1,1 +1,1 @@
-"""Test package for SentinelProbe.""" 
+"""Test package for SentinelProbe."""

@@ -49,21 +49,30 @@ async def close_redis_connection() -> None:
         logger.info("Redis connection closed")
 
 
-def get_redis() -> Redis:
-    """Get Redis client.
+async def get_redis_client() -> Redis:
+    """
+    Get Redis client instance.
 
     Returns:
-        Redis: Redis client.
-
-    Raises:
-        ValueError: If Redis client is not initialized.
+        Redis: Redis client instance
     """
+    global redis_client
+
     if redis_client is None:
-        raise ValueError("Redis client not initialized")
+        settings = get_settings()
+        redis_client = Redis(
+            host=settings.redis_host,
+            port=settings.redis_port,
+            password=settings.redis_password,
+            db=settings.redis_db,
+        )
+
     return redis_client
 
 
-async def set_key(key: str, value: Union[str, Dict[str, Any], List[Any]], expire: int = 0) -> bool:
+async def set_key(
+    key: str, value: Union[str, Dict[str, Any], List[Any]], expire: int = 0
+) -> bool:
     """Set a key in Redis.
 
     Args:
@@ -74,7 +83,7 @@ async def set_key(key: str, value: Union[str, Dict[str, Any], List[Any]], expire
     Returns:
         bool: True if successful.
     """
-    redis_instance = get_redis()
+    redis_instance = await get_redis_client()
     if isinstance(value, (dict, list)):
         value = json.dumps(value)
     await redis_instance.set(key, value)
@@ -92,7 +101,7 @@ async def get_key(key: str) -> Optional[str]:
     Returns:
         Optional[str]: Value of the key or None.
     """
-    redis_instance = get_redis()
+    redis_instance = await get_redis_client()
     return await redis_instance.get(key)
 
 
@@ -120,7 +129,7 @@ async def delete_key(key: str) -> int:
     Returns:
         int: Number of deleted keys.
     """
-    redis_instance = get_redis()
+    redis_instance = await get_redis_client()
     return await redis_instance.delete(key)
 
 
@@ -135,7 +144,7 @@ async def set_hash(hash_key: str, field: str, value: str) -> int:
     Returns:
         int: 1 if field is new, 0 if field was updated.
     """
-    redis_instance = get_redis()
+    redis_instance = await get_redis_client()
     return await redis_instance.hset(hash_key, field, value)
 
 
@@ -149,7 +158,7 @@ async def get_hash(hash_key: str, field: str) -> Optional[str]:
     Returns:
         Optional[str]: Value of the field or None.
     """
-    redis_instance = get_redis()
+    redis_instance = await get_redis_client()
     return await redis_instance.hget(hash_key, field)
 
 
@@ -162,7 +171,7 @@ async def get_all_hash(hash_key: str) -> Dict[str, str]:
     Returns:
         Dict[str, str]: All fields and values.
     """
-    redis_instance = get_redis()
+    redis_instance = await get_redis_client()
     return await redis_instance.hgetall(hash_key)
 
 
@@ -176,5 +185,5 @@ async def delete_hash_field(hash_key: str, field: str) -> int:
     Returns:
         int: Number of deleted fields.
     """
-    redis_instance = get_redis()
-    return await redis_instance.hdel(hash_key, field) 
+    redis_instance = await get_redis_client()
+    return await redis_instance.hdel(hash_key, field)

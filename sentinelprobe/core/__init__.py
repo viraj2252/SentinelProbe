@@ -1,1 +1,1 @@
-"""Core module for SentinelProbe.""" 
+"""Core module for SentinelProbe."""

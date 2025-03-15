@@ -1,7 +1,7 @@
 """Service for the Orchestration Engine."""
 
 import json
-from typing import Dict, List, Optional, Union
+from typing import List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,7 +11,6 @@ from sentinelprobe.orchestration.models import (
     JobCreate,
     JobResponse,
     JobStatus,
-    JobType,
     JobUpdate,
     Task,
     TaskCreate,
@@ -21,7 +20,7 @@ from sentinelprobe.orchestration.models import (
 )
 from sentinelprobe.orchestration.repository import JobRepository, TaskRepository
 
-logger = get_logger()
+logger = get_logger(__name__)
 
 
 class OrchestrationService:
@@ -91,7 +90,9 @@ class OrchestrationService:
         jobs = await self.job_repository.get_jobs(limit, offset, status)
         return [self._job_to_response(job) for job in jobs]
 
-    async def update_job(self, job_id: int, job_data: JobUpdate) -> Optional[JobResponse]:
+    async def update_job(
+        self, job_id: int, job_data: JobUpdate
+    ) -> Optional[JobResponse]:
         """Update a job.
 
         Args:
@@ -167,7 +168,9 @@ class OrchestrationService:
         tasks = await self.task_repository.get_tasks_by_job(job_id)
         return [self._task_to_response(task) for task in tasks]
 
-    async def update_task(self, task_id: int, task_data: TaskUpdate) -> Optional[TaskResponse]:
+    async def update_task(
+        self, task_id: int, task_data: TaskUpdate
+    ) -> Optional[TaskResponse]:
         """Update a task.
 
         Args:
@@ -214,10 +217,10 @@ class OrchestrationService:
         )
         if not job:
             return None
-        
+
         # TODO: Implement actual job execution logic
         # This would involve creating tasks and dispatching them to appropriate modules
-        
+
         return self._job_to_response(job)
 
     async def cancel_job(self, job_id: int) -> Optional[JobResponse]:
@@ -235,7 +238,7 @@ class OrchestrationService:
         )
         if not job:
             return None
-        
+
         # Cancel all pending and running tasks
         tasks = await self.task_repository.get_tasks_by_job(job_id)
         for task in tasks:
@@ -244,7 +247,7 @@ class OrchestrationService:
                     task_id=task.id,
                     status=TaskStatus.CANCELLED,
                 )
-        
+
         return self._job_to_response(job)
 
     def _job_to_response(self, job: Job) -> JobResponse:
@@ -293,4 +296,4 @@ class OrchestrationService:
             started_at=task.started_at,
             completed_at=task.completed_at,
             result=result,
-        ) 
+        )

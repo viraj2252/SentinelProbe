@@ -1,28 +1,58 @@
-"""Main entry point for SentinelProbe application."""
+"""Main entry point for SentinelProbe."""
 
-import uvicorn
+import argparse
 
-from sentinelprobe.core.config import get_settings
 from sentinelprobe.core.logging import configure_logging, get_logger
 
-logger = get_logger()
+logger = get_logger(__name__)
 
 
-def main() -> None:
-    """Run the SentinelProbe application."""
+def add_run_command(subparsers):
+    """Add run command to argument parser."""
+    run_parser = subparsers.add_parser("run", help="Run the application")
+    return run_parser
+
+
+def add_migrate_command(subparsers):
+    """Add migrate command to argument parser."""
+    migrate_parser = subparsers.add_parser("migrate", help="Run database migrations")
+    return migrate_parser
+
+
+def run_app(args):
+    """Run the application."""
     configure_logging()
-    settings = get_settings()
+    logger.info("Starting SentinelProbe application")
+    # Implementation will be added later
 
-    logger.info(f"Starting {settings.APP_NAME} in {'debug' if settings.DEBUG else 'production'} mode")
-    
-    uvicorn.run(
-        "sentinelprobe.api.app:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=settings.DEBUG,
-        log_level=settings.LOG_LEVEL.lower(),
+
+def run_migrations(args):
+    """Run database migrations."""
+    configure_logging()
+    logger.info("Running database migrations")
+    # Implementation will be added later
+
+
+def main():
+    """Run the main application."""
+    parser = argparse.ArgumentParser(
+        description="SentinelProbe - Monitoring and Alerting System"
     )
+    subparsers = parser.add_subparsers(dest="command", help="Command to run")
+
+    # Add commands
+    add_run_command(subparsers)
+    add_migrate_command(subparsers)
+
+    args = parser.parse_args()
+
+    if args.command == "run":
+        run_app(args)
+    elif args.command == "migrate":
+        run_migrations(args)
+    else:
+        parser.print_help()
 
 
 if __name__ == "__main__":
-    main() 
+    main()

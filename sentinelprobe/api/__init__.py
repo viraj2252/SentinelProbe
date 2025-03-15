@@ -1,1 +1,1 @@
-"""API module for SentinelProbe.""" 
+"""API module for SentinelProbe."""

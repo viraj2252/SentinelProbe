@@ -1,7 +1,6 @@
 """Logging configuration for SentinelProbe."""
 
-import sys
-from typing import Dict, Union
+import logging
 
 from loguru import logger
 
@@ -20,7 +19,7 @@ def configure_logging() -> None:
 
     # Add console handler
     logger.add(
-        sys.stderr,
+        logging.StreamHandler(),
         level=settings.LOG_LEVEL,
         format=(
             "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
@@ -55,4 +54,4 @@ def get_logger() -> "logger":
     Returns:
         logger: Configured loguru logger instance.
     """
-    return logger 
+    return logger

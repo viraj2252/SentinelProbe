@@ -18,16 +18,16 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for FastAPI application.
-    
+
     Handles startup and shutdown events.
-    
+
     Args:
         app: FastAPI application.
     """
     # Startup
     configure_logging()
     logger.info(f"Starting {settings.APP_NAME} API")
-    
+
     # Initialize database connections
     try:
         await init_db()
@@ -36,12 +36,12 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Error initializing database connections: {e}")
         raise
-    
+
     yield
-    
+
     # Shutdown
     logger.info(f"Shutting down {settings.APP_NAME} API")
-    
+
     # Close database connections
     await close_mongo_connection()
     await close_redis_connection()
@@ -88,4 +88,4 @@ async def health_check() -> dict:
     Returns:
         dict: Health status information.
     """
-    return {"status": "healthy"} 
+    return {"status": "healthy"}

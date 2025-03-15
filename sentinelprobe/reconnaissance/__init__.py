@@ -1,1 +1,1 @@
-"""Reconnaissance module for SentinelProbe.""" 
+"""Reconnaissance module for SentinelProbe."""

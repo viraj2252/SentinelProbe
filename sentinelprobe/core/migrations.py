@@ -1,15 +1,18 @@
-"""Database migrations module for SentinelProbe."""
+"""Database migration utilities."""
 
 import asyncio
-from typing import List, Optional
+import importlib.util
+import inspect
+from pathlib import PurePath
+from typing import List, Optional, Set
 
-from sqlalchemy import inspect, text
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from sentinelprobe.core.db import Base, engine
+from sentinelprobe.core.db import Base, get_engine
 from sentinelprobe.core.logging import get_logger
 
-logger = get_logger()
+logger = get_logger(__name__)
 
 
 async def get_tables(engine_instance: AsyncEngine) -> List[str]:
@@ -41,80 +44,68 @@ async def table_exists(engine_instance: AsyncEngine, table_name: str) -> bool:
 
 
 async def create_schema(engine_instance: Optional[AsyncEngine] = None) -> List[str]:
-    """Create database schema based on SQLAlchemy models.
+    """
+    Create database schema.
 
     Args:
-        engine_instance: SQLAlchemy engine. If None, use the default engine.
+        engine_instance: Optional SQLAlchemy engine instance
 
     Returns:
-        List[str]: List of created tables.
+        List[str]: List of created tables
     """
-    logger.info("Creating database schema")
-    
     # Use provided engine or default
-    engine_to_use = engine_instance or engine
-    
+    engine_to_use = engine_instance or get_engine()
+
     # Get tables before creation
-    tables_before = await get_tables(engine_to_use)
-    logger.debug(f"Tables before creation: {tables_before}")
-    
-    # Create all tables
+    inspector = inspect(engine_to_use)
+    tables_before = await inspector.get_table_names()
+
+    # Create tables
     async with engine_to_use.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    
+
     # Get tables after creation
-    tables_after = await get_tables(engine_to_use)
-    logger.debug(f"Tables after creation: {tables_after}")
-    
-    # Determine which tables were created
-    created_tables = [table for table in tables_after if table not in tables_before]
-    
-    if created_tables:
-        logger.info(f"Created tables: {', '.join(created_tables)}")
-    else:
-        logger.info("No new tables created")
-    
+    inspector = inspect(engine_to_use)
+    tables_after = await inspector.get_table_names()
+
+    # Return list of created tables
+    created_tables = [t for t in tables_after if t not in tables_before]
     return created_tables
 
 
 async def drop_schema(engine_instance: Optional[AsyncEngine] = None) -> List[str]:
-    """Drop all tables in the database.
+    """
+    Drop database schema.
 
     Args:
-        engine_instance: SQLAlchemy engine. If None, use the default engine.
+        engine_instance: Optional SQLAlchemy engine instance
 
     Returns:
-        List[str]: List of dropped tables.
+        List[str]: List of dropped tables
     """
-    logger.warning("Dropping all tables from the database")
-    
     # Use provided engine or default
-    engine_to_use = engine_instance or engine
-    
+    engine_to_use = engine_instance or get_engine()
+
     # Get tables before dropping
-    tables_before = await get_tables(engine_to_use)
-    logger.debug(f"Tables before dropping: {tables_before}")
-    
-    # Drop all tables
+    inspector = inspect(engine_to_use)
+    tables_before = await inspector.get_table_names()
+
+    # Drop tables
     async with engine_to_use.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
-    
+
     # Get tables after dropping
-    tables_after = await get_tables(engine_to_use)
-    logger.debug(f"Tables after dropping: {tables_after}")
-    
-    # Determine which tables were dropped
-    dropped_tables = [table for table in tables_before if table not in tables_after]
-    
-    if dropped_tables:
-        logger.info(f"Dropped tables: {', '.join(dropped_tables)}")
-    else:
-        logger.info("No tables were dropped")
-    
+    inspector = inspect(engine_to_use)
+    tables_after = await inspector.get_table_names()
+
+    # Return list of dropped tables
+    dropped_tables = [t for t in tables_before if t not in tables_after]
     return dropped_tables
 
 
-async def recreate_schema(engine_instance: Optional[AsyncEngine] = None) -> tuple[List[str], List[str]]:
+async def recreate_schema(
+    engine_instance: Optional[AsyncEngine] = None,
+) -> tuple[List[str], List[str]]:
     """Drop and recreate all tables in the database.
 
     Args:
@@ -124,23 +115,25 @@ async def recreate_schema(engine_instance: Optional[AsyncEngine] = None) -> tupl
         tuple[List[str], List[str]]: Tuple of (dropped tables, created tables).
     """
     logger.warning("Recreating database schema")
-    
+
     # Drop all tables
     dropped_tables = await drop_schema(engine_instance)
-    
+
     # Create all tables
     created_tables = await create_schema(engine_instance)
-    
+
     return dropped_tables, created_tables
 
 
-async def run_migration(migration_name: Optional[str] = None, engine_instance: Optional[AsyncEngine] = None) -> List[str]:
+async def run_migration(
+    migration_name: Optional[str] = None, engine_instance: Optional[AsyncEngine] = None
+) -> List[str]:
     """Run a specific migration or create the schema if no migration is specified.
 
     Args:
         migration_name: Name of the migration to run. If None, create the schema.
         engine_instance: SQLAlchemy engine. If None, use the default engine.
-        
+
     Returns:
         List[str]: List of created tables.
     """
@@ -156,4 +149,52 @@ async def run_migration(migration_name: Optional[str] = None, engine_instance: O
 
 if __name__ == "__main__":
     """Run migrations when the module is executed directly."""
-    asyncio.run(create_schema()) 
+    asyncio.run(create_schema())
+
+
+class MigrationManager:
+    """Manages database migrations."""
+
+    def __init__(self, engine: AsyncEngine):
+        """
+        Initialize migration manager.
+
+        Args:
+            engine: SQLAlchemy engine instance
+        """
+        self.engine = engine
+
+    async def _get_applied_migrations(self) -> Set[str]:
+        """Get a set of migrations that have already been applied."""
+        async with self.engine.begin() as conn:
+            # Create migrations table if it doesn't exist
+            await conn.execute(
+                text(
+                    """
+                    CREATE TABLE IF NOT EXISTS migrations (
+                        id SERIAL PRIMARY KEY,
+                        name VARCHAR(255) NOT NULL,
+                        applied_at TIMESTAMP NOT NULL
+                    )
+                    """
+                )
+            )
+
+            # Get applied migrations
+            result = await conn.execute(text("SELECT name FROM migrations"))
+            return {row[0] for row in result.fetchall()}
+
+    async def _apply_migration(self, migration_path: PurePath) -> None:
+        """Apply a single migration file."""
+        migration_name = migration_path.name
+
+        # Load the migration module
+        spec = importlib.util.spec_from_file_location(
+            f"migration_{migration_name}", migration_path
+        )
+
+        if not spec or not spec.loader:
+            raise ImportError(f"Could not load migration: {migration_path}")
+
+        migration_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(migration_module)

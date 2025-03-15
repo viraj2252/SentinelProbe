@@ -1,1 +1,1 @@
-"""Learning module for SentinelProbe.""" 
+"""Learning module for SentinelProbe."""

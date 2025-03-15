@@ -1,30 +1,26 @@
 """Repository for the Orchestration Engine."""
 
-import json
 from datetime import datetime
-from typing import List, Optional, Union
+from typing import List, Optional
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from sentinelprobe.core.logging import get_logger
 from sentinelprobe.orchestration.models import Job, JobStatus, JobType, Task, TaskStatus
 
-logger = get_logger()
+logger = get_logger(__name__)
 
 
 class JobRepository:
-    """Repository for job operations.
-
-    Attributes:
-        session: Database session.
-    """
+    """Repository for job operations."""
 
     def __init__(self, session: AsyncSession):
-        """Initialize repository.
+        """
+        Initialize repository.
 
         Args:
-            session: Database session.
+            session: Database session
         """
         self.session = session
 
@@ -36,61 +32,72 @@ class JobRepository:
         description: Optional[str] = None,
         config: Optional[dict] = None,
     ) -> Job:
-        """Create a new job.
+        """
+        Create a new job.
 
         Args:
-            name: Job name.
-            job_type: Type of job.
-            target: Target system.
-            description: Job description.
-            config: Job configuration.
+            name: Job name
+            job_type: Type of job
+            target: Target system
+            description: Optional job description
+            config: Optional job configuration
 
         Returns:
-            Job: Created job.
+            Job: Created job
         """
         job = Job(
             name=name,
             job_type=job_type,
             target=target,
             description=description,
-            config=json.dumps(config) if config else None,
+            config=config or {},
         )
+
         self.session.add(job)
         await self.session.commit()
         await self.session.refresh(job)
-        logger.info(f"Created job: {job.id} - {job.name}")
+
         return job
 
     async def get_job(self, job_id: int) -> Optional[Job]:
-        """Get a job by ID.
+        """
+        Get a job by ID.
 
         Args:
-            job_id: Job ID.
+            job_id: Job ID
 
         Returns:
-            Optional[Job]: Found job or None.
+            Optional[Job]: Found job or None
         """
-        result = await self.session.execute(select(Job).filter(Job.id == job_id))
-        return result.scalars().first()
+        stmt = select(Job).where(Job.id == job_id)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
 
     async def get_jobs(
-        self, limit: int = 100, offset: int = 0, status: Optional[JobStatus] = None
+        self,
+        limit: int = 100,
+        offset: int = 0,
+        status: Optional[JobStatus] = None,
     ) -> List[Job]:
-        """Get jobs with optional filtering.
+        """
+        Get jobs with optional filtering.
 
         Args:
-            limit: Maximum number of jobs to return.
-            offset: Number of jobs to skip.
-            status: Filter by status.
+            limit: Maximum number of jobs to return
+            offset: Number of jobs to skip
+            status: Filter by status
 
         Returns:
-            List[Job]: List of jobs.
+            List[Job]: List of jobs
         """
-        query = select(Job)
+        stmt = select(Job)
+
         if status:
-            query = query.filter(Job.status == status)
-        query = query.order_by(Job.created_at.desc()).limit(limit).offset(offset)
-        result = await self.session.execute(query)
+            stmt = stmt.where(Job.status == status)
+
+        stmt = stmt.limit(limit).offset(offset)
+        result = await self.session.execute(stmt)
+
         return list(result.scalars().all())
 
     async def update_job(
@@ -101,122 +108,163 @@ class JobRepository:
         status: Optional[JobStatus] = None,
         config: Optional[dict] = None,
     ) -> Optional[Job]:
-        """Update a job.
+        """
+        Update a job.
 
         Args:
-            job_id: Job ID.
-            name: Job name.
-            description: Job description.
-            status: Job status.
-            config: Job configuration.
+            job_id: Job ID
+            name: Optional new name
+            description: Optional new description
+            status: Optional new status
+            config: Optional new configuration
 
         Returns:
-            Optional[Job]: Updated job or None.
+            Optional[Job]: Updated job or None if not found
         """
+        # Get the job
         job = await self.get_job(job_id)
         if not job:
             return None
 
+        # Update fields if provided
         if name is not None:
             job.name = name
         if description is not None:
             job.description = description
         if status is not None:
             job.status = status
-            if status == JobStatus.RUNNING and not job.started_at:
-                job.started_at = datetime.utcnow()
-            elif status in (JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED):
-                job.completed_at = datetime.utcnow()
         if config is not None:
-            job.config = json.dumps(config)
+            job.config = config
+
+        # Update timestamp
+        job.updated_at = datetime.utcnow()
 
         await self.session.commit()
         await self.session.refresh(job)
-        logger.info(f"Updated job: {job.id} - {job.name}")
+
         return job
 
     async def delete_job(self, job_id: int) -> bool:
-        """Delete a job.
+        """
+        Delete a job.
 
         Args:
-            job_id: Job ID.
+            job_id: Job ID
 
         Returns:
-            bool: True if deleted, False if not found.
+            bool: True if deleted, False if not found
         """
+        # Get the job
         job = await self.get_job(job_id)
         if not job:
             return False
 
+        # Delete the job
         await self.session.delete(job)
         await self.session.commit()
-        logger.info(f"Deleted job: {job_id}")
+
         return True
+
+    async def update_job_status(self, job_id: int, status: JobStatus) -> Optional[Job]:
+        """
+        Update job status.
+
+        Args:
+            job_id: Job ID
+            status: New job status
+
+        Returns:
+            Optional[Job]: Updated job or None if not found
+        """
+        stmt = (
+            update(Job)
+            .where(Job.id == job_id)
+            .values(status=status, updated_at=datetime.utcnow())
+            .returning(Job)
+        )
+
+        result = await self.session.execute(stmt)
+        await self.session.commit()
+
+        return result.scalar_one_or_none()
 
 
 class TaskRepository:
-    """Repository for task operations.
-
-    Attributes:
-        session: Database session.
-    """
+    """Repository for task operations."""
 
     def __init__(self, session: AsyncSession):
-        """Initialize repository.
+        """
+        Initialize repository.
 
         Args:
-            session: Database session.
+            session: Database session
         """
         self.session = session
 
     async def create_task(
-        self, job_id: int, name: str, description: Optional[str] = None
+        self,
+        job_id: int,
+        name: str,
+        description: Optional[str] = None,
     ) -> Optional[Task]:
-        """Create a new task.
+        """
+        Create a new task.
 
         Args:
-            job_id: Related job ID.
-            name: Task name.
-            description: Task description.
+            job_id: Related job ID
+            name: Task name
+            description: Optional task description
 
         Returns:
-            Optional[Task]: Created task or None if job not found.
+            Optional[Task]: Created task or None if job not found
         """
         # Check if job exists
-        result = await self.session.execute(select(Job).filter(Job.id == job_id))
-        job = result.scalars().first()
+        stmt = select(Job).where(Job.id == job_id)
+        result = await self.session.execute(stmt)
+        job = result.scalar_one_or_none()
+
         if not job:
             return None
 
-        task = Task(job_id=job_id, name=name, description=description)
+        # Create task
+        task = Task(
+            job_id=job_id,
+            name=name,
+            description=description,
+        )
+
         self.session.add(task)
         await self.session.commit()
         await self.session.refresh(task)
-        logger.info(f"Created task: {task.id} - {task.name} for job {job_id}")
+
         return task
 
     async def get_task(self, task_id: int) -> Optional[Task]:
-        """Get a task by ID.
+        """
+        Get a task by ID.
 
         Args:
-            task_id: Task ID.
+            task_id: Task ID
 
         Returns:
-            Optional[Task]: Found task or None.
+            Optional[Task]: Found task or None
         """
-        result = await self.session.execute(select(Task).filter(Task.id == task_id))
-        return result.scalars().first()
+        stmt = select(Task).where(Task.id == task_id)
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
 
     async def get_tasks_by_job(self, job_id: int) -> List[Task]:
-        """Get tasks for a job.
+        """
+        Get tasks for a job.
 
         Args:
-            job_id: Job ID.
+            job_id: Job ID
 
         Returns:
-            List[Task]: List of tasks.
+            List[Task]: List of tasks
         """
-        result = await self.session.execute(select(Task).filter(Task.job_id == job_id))
+        stmt = select(Task).where(Task.job_id == job_id)
+        result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
     async def update_task(
@@ -227,54 +275,65 @@ class TaskRepository:
         status: Optional[TaskStatus] = None,
         result: Optional[dict] = None,
     ) -> Optional[Task]:
-        """Update a task.
+        """
+        Update a task.
 
         Args:
-            task_id: Task ID.
-            name: Task name.
-            description: Task description.
-            status: Task status.
-            result: Task result.
+            task_id: Task ID
+            name: Optional new name
+            description: Optional new description
+            status: Optional new status
+            result: Optional new result
 
         Returns:
-            Optional[Task]: Updated task or None.
+            Optional[Task]: Updated task or None if not found
         """
+        # Get the task
         task = await self.get_task(task_id)
         if not task:
             return None
 
+        # Update fields if provided
         if name is not None:
             task.name = name
         if description is not None:
             task.description = description
         if status is not None:
             task.status = status
+            # Update timestamps based on status
             if status == TaskStatus.RUNNING and not task.started_at:
                 task.started_at = datetime.utcnow()
-            elif status in (TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED):
+            elif status in (
+                TaskStatus.COMPLETED,
+                TaskStatus.FAILED,
+                TaskStatus.CANCELLED,
+            ):
                 task.completed_at = datetime.utcnow()
         if result is not None:
-            task.result = json.dumps(result)
+            task.result = result
 
         await self.session.commit()
         await self.session.refresh(task)
-        logger.info(f"Updated task: {task.id} - {task.name}")
+
         return task
 
     async def delete_task(self, task_id: int) -> bool:
-        """Delete a task.
+        """
+        Delete a task.
 
         Args:
-            task_id: Task ID.
+            task_id: Task ID
 
         Returns:
-            bool: True if deleted, False if not found.
+            bool: True if deleted, False if not found
         """
+        # Get the task
         task = await self.get_task(task_id)
         if not task:
             return False
 
+        # Delete the task
         await self.session.delete(task)
         await self.session.commit()
-        logger.info(f"Deleted task: {task_id}")
-        return True 
+
+        return True
