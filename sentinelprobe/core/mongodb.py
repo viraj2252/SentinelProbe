@@ -41,6 +41,7 @@ async def close_mongo_connection() -> None:
     global mongo_client
     if mongo_client:
         logger.info("Closing MongoDB connection")
+        # Note: mongo_client.close() is not an async function, so no await is needed
         mongo_client.close()
         mongo_client = None
         logger.info("MongoDB connection closed")

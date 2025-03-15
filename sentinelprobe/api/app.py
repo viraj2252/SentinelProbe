@@ -1,5 +1,7 @@
 """FastAPI application for SentinelProbe."""
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -12,28 +14,17 @@ from sentinelprobe.core.redis import close_redis_connection, connect_to_redis
 logger = get_logger()
 settings = get_settings()
 
-app = FastAPI(
-    title=settings.APP_NAME,
-    description="AI-Powered Penetration Testing System",
-    version="0.1.0",
-    docs_url=f"{settings.API_PREFIX}/docs",
-    redoc_url=f"{settings.API_PREFIX}/redoc",
-    openapi_url=f"{settings.API_PREFIX}/openapi.json",
-)
 
-# Configure CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origins
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-@app.on_event("startup")
-async def startup_event() -> None:
-    """Execute startup tasks."""
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for FastAPI application.
+    
+    Handles startup and shutdown events.
+    
+    Args:
+        app: FastAPI application.
+    """
+    # Startup
     configure_logging()
     logger.info(f"Starting {settings.APP_NAME} API")
     
@@ -45,16 +36,35 @@ async def startup_event() -> None:
     except Exception as e:
         logger.error(f"Error initializing database connections: {e}")
         raise
-
-
-@app.on_event("shutdown")
-async def shutdown_event() -> None:
-    """Execute shutdown tasks."""
+    
+    yield
+    
+    # Shutdown
     logger.info(f"Shutting down {settings.APP_NAME} API")
     
     # Close database connections
     await close_mongo_connection()
     await close_redis_connection()
+
+
+app = FastAPI(
+    title=settings.APP_NAME,
+    description="AI-Powered Penetration Testing System",
+    version="0.1.0",
+    docs_url=f"{settings.API_PREFIX}/docs",
+    redoc_url=f"{settings.API_PREFIX}/redoc",
+    openapi_url=f"{settings.API_PREFIX}/openapi.json",
+    lifespan=lifespan,
+)
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with specific origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")
