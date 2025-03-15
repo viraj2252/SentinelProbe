@@ -1,6 +1,6 @@
 # SentinelProbe
 
-![CI](https://github.com/yourusername/sentinelprobe/workflows/CI/badge.svg)
+![CI](https://github.com/viraj2252/SentinelProbe/workflows/CI/badge.svg)
 
 AI-Powered Penetration Testing System
 
