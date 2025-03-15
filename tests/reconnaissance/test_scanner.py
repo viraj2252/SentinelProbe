@@ -309,7 +309,6 @@ class TestPortScannerService:
     async def test_scan_target_aggressive_mode(
         self, aggressive_scanner_service, mock_repositories
     ):
-        """Test scanning a target in aggressive mode."""
         # Mock scan_port to simulate different port statuses
         async def mock_scan_port(ip, port, timeout=None):
             if port == 80:
