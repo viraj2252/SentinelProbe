@@ -18,7 +18,7 @@ async def test_mongodb_connection(mock_db_dependencies):
 async def test_get_collection(mock_db_dependencies):
     """Test getting a MongoDB collection."""
     # Get a collection using the mocked function
-    collection = get_collection("test_collection")
+    collection = await get_collection("test_collection")
 
     # Verify the collection is returned (we don't need to check the exact type
     # since we're using a mock)
@@ -31,7 +31,7 @@ async def test_get_collection(mock_db_dependencies):
 async def test_insert_and_find_one(mock_db_dependencies):
     """Test inserting and finding a document."""
     # Get a collection
-    collection = get_collection("test_collection")
+    collection = await get_collection("test_collection")
 
     # Insert a document
     document = {"name": "test_document", "value": 42, "tags": ["test", "example"]}
@@ -52,7 +52,7 @@ async def test_insert_and_find_one(mock_db_dependencies):
 async def test_find_many(mock_db_dependencies):
     """Test finding multiple documents."""
     # Get a collection
-    collection = get_collection("test_collection")
+    collection = await get_collection("test_collection")
 
     # Insert several documents
     documents = [
@@ -87,7 +87,7 @@ async def test_find_many(mock_db_dependencies):
 async def test_update_one(mock_db_dependencies):
     """Test updating a document."""
     # Get a collection
-    collection = get_collection("test_collection")
+    collection = await get_collection("test_collection")
 
     # Insert a document
     document = {"name": "update_test", "status": "pending", "count": 1}
@@ -114,7 +114,7 @@ async def test_update_one(mock_db_dependencies):
 async def test_delete_one(mock_db_dependencies):
     """Test deleting a document."""
     # Get a collection
-    collection = get_collection("test_collection")
+    collection = await get_collection("test_collection")
 
     # Insert a document
     document = {"name": "delete_test", "temporary": True}
@@ -140,7 +140,7 @@ async def test_delete_one(mock_db_dependencies):
 async def test_complex_document(mock_db_dependencies):
     """Test operations with a complex document structure."""
     # Get a collection
-    collection = get_collection("test_collection")
+    collection = await get_collection("test_collection")
 
     # Insert a complex document
     document = {
