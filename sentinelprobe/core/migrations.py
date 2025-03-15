@@ -2,11 +2,10 @@
 
 import asyncio
 import importlib.util
-import inspect
 from pathlib import PurePath
 from typing import List, Optional, Set
 
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from sentinelprobe.core.db import Base, get_engine
@@ -44,23 +43,21 @@ async def table_exists(engine_instance: AsyncEngine, table_name: str) -> bool:
 
 
 async def create_schema(engine_instance: Optional[AsyncEngine] = None) -> List[str]:
-    """
-    Create database schema.
+    """Create database schema.
 
     Args:
-        engine_instance: Optional SQLAlchemy engine instance
+        engine_instance: Optional SQLAlchemy engine.
 
     Returns:
-        List[str]: List of created tables
+        List[str]: List of created tables.
     """
-    # Use provided engine or default
     engine_to_use = engine_instance or get_engine()
 
     # Get tables before creation
     inspector = inspect(engine_to_use)
     tables_before = await inspector.get_table_names()
 
-    # Create tables
+    # Create all tables
     async with engine_to_use.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
@@ -69,28 +66,26 @@ async def create_schema(engine_instance: Optional[AsyncEngine] = None) -> List[s
     tables_after = await inspector.get_table_names()
 
     # Return list of created tables
-    created_tables = [t for t in tables_after if t not in tables_before]
+    created_tables = list(set(tables_after) - set(tables_before))
     return created_tables
 
 
 async def drop_schema(engine_instance: Optional[AsyncEngine] = None) -> List[str]:
-    """
-    Drop database schema.
+    """Drop database schema.
 
     Args:
-        engine_instance: Optional SQLAlchemy engine instance
+        engine_instance: Optional SQLAlchemy engine.
 
     Returns:
-        List[str]: List of dropped tables
+        List[str]: List of dropped tables.
     """
-    # Use provided engine or default
     engine_to_use = engine_instance or get_engine()
 
     # Get tables before dropping
     inspector = inspect(engine_to_use)
     tables_before = await inspector.get_table_names()
 
-    # Drop tables
+    # Drop all tables
     async with engine_to_use.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
 
@@ -99,7 +94,7 @@ async def drop_schema(engine_instance: Optional[AsyncEngine] = None) -> List[str
     tables_after = await inspector.get_table_names()
 
     # Return list of dropped tables
-    dropped_tables = [t for t in tables_before if t not in tables_after]
+    dropped_tables = list(set(tables_before) - set(tables_after))
     return dropped_tables
 
 

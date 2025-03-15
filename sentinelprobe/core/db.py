@@ -2,7 +2,12 @@
 
 from typing import AsyncGenerator
 
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.orm import DeclarativeBase
 
 from sentinelprobe.core.config import get_settings
@@ -56,3 +61,12 @@ async def init_db() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     logger.info("Database initialized")
+
+
+def get_engine() -> AsyncEngine:
+    """Get the SQLAlchemy engine instance.
+
+    Returns:
+        AsyncEngine: The global SQLAlchemy engine instance.
+    """
+    return engine
