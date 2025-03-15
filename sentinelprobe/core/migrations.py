@@ -54,19 +54,28 @@ async def create_schema(engine_instance: Optional[AsyncEngine] = None) -> List[s
     engine_to_use = engine_instance or get_engine()
 
     # Get tables before creation
-    inspector = inspect(engine_to_use)
-    tables_before = await inspector.get_table_names()
+    tables_before = set()
+    async with engine_to_use.begin() as conn:
+        result = await conn.execute(
+            text("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
+        )
+        tables_before = {row[0] for row in result.fetchall()}
 
     # Create all tables
     async with engine_to_use.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
     # Get tables after creation
-    inspector = inspect(engine_to_use)
-    tables_after = await inspector.get_table_names()
+    tables_after = set()
+    async with engine_to_use.begin() as conn:
+        result = await conn.execute(
+            text("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
+        )
+        tables_after = {row[0] for row in result.fetchall()}
 
     # Return list of created tables
-    created_tables = list(set(tables_after) - set(tables_before))
+    created_tables = list(tables_after - tables_before)
+    logger.info(f"Created tables: {created_tables}")
     return created_tables
 
 
@@ -193,3 +202,80 @@ class MigrationManager:
 
         migration_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(migration_module)
+
+        # Check if the module has a direct_sql_upgrade function
+        # If not, we'll assume it has tables defined in upgrade_tables()
+        if hasattr(migration_module, "direct_sql_upgrade"):
+            # Execute the SQL statements directly
+            async with self.engine.begin() as conn:
+                for sql_statement in migration_module.direct_sql_upgrade():
+                    await conn.execute(text(sql_statement))
+
+                # Record the migration as applied
+                await conn.execute(
+                    text(
+                        """
+                        INSERT INTO migrations (name, applied_at)
+                        VALUES (:name, NOW())
+                        """
+                    ),
+                    {"name": migration_name},
+                )
+
+                logger.info(f"Applied migration: {migration_name}")
+        else:
+            logger.error(
+                f"Migration {migration_name} does not have a direct_sql_upgrade function"
+            )
+
+            # Record that we attempted but failed the migration
+            async with self.engine.begin() as conn:
+                await conn.execute(
+                    text(
+                        """
+                        INSERT INTO migrations (name, applied_at)
+                        VALUES (:name, NOW())
+                        """
+                    ),
+                    {"name": f"FAILED_{migration_name}"},
+                )
+
+            raise NotImplementedError(
+                f"Migration {migration_name} does not have a direct_sql_upgrade function"
+            )
+
+    async def apply_migrations(self) -> None:
+        """Apply all pending migrations."""
+        # Ensure migrations table exists
+        applied_migrations = await self._get_applied_migrations()
+
+        # Get all migration files
+        from pathlib import Path
+
+        # Get the directory where migrations are stored
+        migrations_dir = Path(__file__).parent / "migrations" / "versions"
+
+        if not migrations_dir.exists():
+            logger.warning(f"Migrations directory not found: {migrations_dir}")
+            return
+
+        # Get all migration files
+        migration_files = sorted(
+            [f for f in migrations_dir.iterdir() if f.is_file() and f.suffix == ".py"]
+        )
+
+        if not migration_files:
+            logger.info("No migration files found")
+            return
+
+        # Apply pending migrations
+        for migration_file in migration_files:
+            migration_name = migration_file.name
+            if migration_name in applied_migrations:
+                logger.info(f"Migration already applied: {migration_name}")
+                continue
+
+            logger.info(f"Applying migration: {migration_name}")
+            await self._apply_migration(migration_file)
+
+        logger.info("All migrations applied successfully")

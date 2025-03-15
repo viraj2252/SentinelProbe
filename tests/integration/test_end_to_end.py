@@ -1,6 +1,6 @@
 """Integration tests for the complete end-to-end SentinelProbe workflow."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 

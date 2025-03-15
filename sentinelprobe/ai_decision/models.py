@@ -21,6 +21,8 @@ class DecisionRuleType(Enum):
     EXPLOITATION = "exploitation"
     POST_EXPLOITATION = "post_exploitation"
     REPORTING = "reporting"
+    CORRELATION = "correlation"  # New type for vulnerability correlation rules
+    ADAPTIVE = "adaptive"  # New type for adaptive learning rules
 
 
 class DecisionRuleSeverity(Enum):
@@ -40,6 +42,7 @@ class StrategyPhase(Enum):
     EXPLOITATION = "exploitation"
     POST_EXPLOITATION = "post_exploitation"
     REPORTING = "reporting"
+    ADAPTIVE_LEARNING = "adaptive_learning"  # New phase for adaptive learning
 
 
 class ConfidenceLevel(Enum):
@@ -57,6 +60,16 @@ class TargetRiskLevel(Enum):
     MEDIUM = "medium"
     HIGH = "high"
     CRITICAL = "critical"
+
+
+class ContextType(Enum):
+    """Types of context for vulnerability correlation."""
+
+    INFRASTRUCTURE = "infrastructure"  # For infrastructure-related context
+    APPLICATION = "application"  # For application-level context
+    DATA = "data"  # For data-related context
+    USER = "user"  # For user-related context
+    BUSINESS = "business"  # For business impact context
 
 
 # Association table for rules to strategies
@@ -333,3 +346,215 @@ class RuleAction(BaseModel):
     target_id: Optional[int] = None
     knowledge_key: Optional[str] = None
     custom_action: Optional[Dict[str, Any]] = None
+
+
+class VulnerabilityCorrelation(Base):
+    """Model for storing vulnerability correlation patterns."""
+
+    __tablename__ = "vulnerability_correlations"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(String(1000), nullable=False)
+    pattern_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    pattern_definition: Mapped[Dict[str, Any]] = mapped_column(
+        JSON,
+        nullable=False,
+        comment="JSON structure defining the pattern for correlating vulnerabilities",
+    )
+    severity_adjustment: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+        default=1.0,
+        comment="Multiplier to adjust the severity when the pattern is matched",
+    )
+    confidence: Mapped[ConfidenceLevel] = mapped_column(
+        SQLAEnum(ConfidenceLevel), nullable=False, default=ConfidenceLevel.MEDIUM
+    )
+    context_type: Mapped[ContextType] = mapped_column(
+        SQLAEnum(ContextType), nullable=False
+    )
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    correlation_metadata: Mapped[Dict[str, Any]] = mapped_column(
+        JSON, nullable=False, default=dict
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+
+class AdaptiveRule(Base):
+    """Model for adaptive rules that can evolve based on feedback."""
+
+    __tablename__ = "adaptive_rules"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    base_rule_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("decision_rules.id"), nullable=True
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(String(1000), nullable=False)
+    rule_type: Mapped[DecisionRuleType] = mapped_column(
+        SQLAEnum(DecisionRuleType), nullable=False
+    )
+    conditions: Mapped[Dict[str, Any]] = mapped_column(
+        JSON, nullable=False, comment="JSON structure defining rule conditions"
+    )
+    actions: Mapped[Dict[str, Any]] = mapped_column(
+        JSON, nullable=False, comment="JSON structure defining rule actions"
+    )
+    success_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    failure_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    effectiveness_score: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+        default=0.5,
+        comment="Score between 0-1 measuring rule effectiveness",
+    )
+    confidence: Mapped[ConfidenceLevel] = mapped_column(
+        SQLAEnum(ConfidenceLevel), nullable=False, default=ConfidenceLevel.MEDIUM
+    )
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    adaptive_metadata: Mapped[Dict[str, Any]] = mapped_column(
+        JSON, nullable=False, default=dict
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    # Relationships
+    base_rule: Mapped[Optional["DecisionRule"]] = relationship(
+        "DecisionRule", foreign_keys=[base_rule_id]
+    )
+
+
+class ContextualScore(Base):
+    """Model for contextual scoring of vulnerabilities based on environment."""
+
+    __tablename__ = "contextual_scores"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(String(1000), nullable=False)
+    context_type: Mapped[ContextType] = mapped_column(
+        SQLAEnum(ContextType), nullable=False
+    )
+    context_definition: Mapped[Dict[str, Any]] = mapped_column(
+        JSON, nullable=False, comment="JSON structure defining the context parameters"
+    )
+    scoring_function: Mapped[Dict[str, Any]] = mapped_column(
+        JSON,
+        nullable=False,
+        comment="JSON structure defining how to calculate the score adjustment",
+    )
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    score_metadata: Mapped[Dict[str, Any]] = mapped_column(
+        JSON, nullable=False, default=dict
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+
+# Pydantic models for API requests and responses
+class VulnerabilityCorrelationCreate(BaseModel):
+    """Model for creating a vulnerability correlation pattern."""
+
+    name: str
+    description: str
+    pattern_type: str
+    pattern_definition: Dict[str, Any]
+    severity_adjustment: float = 1.0
+    confidence: ConfidenceLevel = ConfidenceLevel.MEDIUM
+    context_type: ContextType
+    is_active: bool = True
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class VulnerabilityCorrelationResponse(BaseModel):
+    """Response model for vulnerability correlation patterns."""
+
+    id: int
+    name: str
+    description: str
+    pattern_type: str
+    pattern_definition: Dict[str, Any]
+    severity_adjustment: float
+    confidence: ConfidenceLevel
+    context_type: ContextType
+    is_active: bool
+    metadata: Dict[str, Any]
+    created_at: datetime
+    updated_at: datetime
+
+
+class AdaptiveRuleCreate(BaseModel):
+    """Model for creating an adaptive rule."""
+
+    base_rule_id: Optional[int] = None
+    name: str
+    description: str
+    rule_type: DecisionRuleType
+    conditions: Dict[str, Any]
+    actions: Dict[str, Any]
+    confidence: ConfidenceLevel = ConfidenceLevel.MEDIUM
+    is_active: bool = True
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class AdaptiveRuleResponse(BaseModel):
+    """Response model for adaptive rules."""
+
+    id: int
+    base_rule_id: Optional[int]
+    name: str
+    description: str
+    rule_type: DecisionRuleType
+    conditions: Dict[str, Any]
+    actions: Dict[str, Any]
+    success_count: int
+    failure_count: int
+    effectiveness_score: float
+    confidence: ConfidenceLevel
+    is_active: bool
+    version: int
+    metadata: Dict[str, Any]
+    created_at: datetime
+    updated_at: datetime
+
+
+class ContextualScoreCreate(BaseModel):
+    """Model for creating a contextual scoring rule."""
+
+    name: str
+    description: str
+    context_type: ContextType
+    context_definition: Dict[str, Any]
+    scoring_function: Dict[str, Any]
+    is_active: bool = True
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ContextualScoreResponse(BaseModel):
+    """Response model for contextual scoring rules."""
+
+    id: int
+    name: str
+    description: str
+    context_type: ContextType
+    context_definition: Dict[str, Any]
+    scoring_function: Dict[str, Any]
+    is_active: bool
+    metadata: Dict[str, Any]
+    created_at: datetime
+    updated_at: datetime

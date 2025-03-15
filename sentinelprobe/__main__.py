@@ -1,10 +1,13 @@
 """Main entry point for SentinelProbe."""
 
 import argparse
+import asyncio
 from argparse import ArgumentParser, Namespace, _SubParsersAction
 from typing import cast
 
+from sentinelprobe.core.db import get_engine
 from sentinelprobe.core.logging import configure_logging, get_logger
+from sentinelprobe.core.migrations import MigrationManager, create_schema
 
 logger = get_logger(__name__)
 
@@ -18,6 +21,16 @@ def add_run_command(subparsers: _SubParsersAction) -> ArgumentParser:
 def add_migrate_command(subparsers: _SubParsersAction) -> ArgumentParser:
     """Add migrate command to argument parser."""
     migrate_parser = subparsers.add_parser("migrate", help="Run database migrations")
+    migrate_subparsers = migrate_parser.add_subparsers(
+        dest="action", help="Migration action"
+    )
+
+    # Add upgrade command
+    _ = migrate_subparsers.add_parser("upgrade", help="Apply migrations")
+
+    # Add init command
+    _ = migrate_subparsers.add_parser("init", help="Initialize database schema")
+
     return cast(ArgumentParser, migrate_parser)
 
 
@@ -28,11 +41,39 @@ def run_app(args: Namespace) -> None:
     # Implementation will be added later
 
 
+async def _run_migrations_async(action: str) -> None:
+    """Run database migrations asynchronously.
+
+    Args:
+        action: Migration action (upgrade, init)
+    """
+    engine = get_engine()
+
+    if action == "init":
+        logger.info("Initializing database schema")
+        created_tables = await create_schema(engine)
+        logger.info(f"Created tables: {', '.join(created_tables)}")
+    elif action == "upgrade":
+        logger.info("Running database migrations")
+        migration_manager = MigrationManager(engine)
+        await migration_manager.apply_migrations()
+        logger.info("Migrations completed successfully")
+    else:
+        logger.error(f"Unknown migration action: {action}")
+
+
 def run_migrations(args: Namespace) -> None:
-    """Run database migrations."""
+    """Run database migrations.
+
+    Args:
+        args: Command-line arguments
+    """
     configure_logging()
-    logger.info("Running database migrations")
-    # Implementation will be added later
+
+    action = getattr(args, "action", "upgrade")  # Default to upgrade if not specified
+
+    # Run migrations asynchronously
+    asyncio.run(_run_migrations_async(action))
 
 
 def main() -> None:

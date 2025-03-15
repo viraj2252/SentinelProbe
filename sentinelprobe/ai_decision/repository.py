@@ -7,7 +7,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from sentinelprobe.ai_decision.models import (
+    AdaptiveRule,
+    AdaptiveRuleCreate,
     ConfidenceLevel,
+    ContextType,
+    ContextualScore,
+    ContextualScoreCreate,
     DecisionRule,
     DecisionRuleCreate,
     DecisionRuleUpdate,
@@ -17,6 +22,8 @@ from sentinelprobe.ai_decision.models import (
     TestStrategy,
     TestStrategyCreate,
     TestStrategyUpdate,
+    VulnerabilityCorrelation,
+    VulnerabilityCorrelationCreate,
 )
 
 
@@ -613,3 +620,522 @@ class TestStrategyRepository:
         await self.session.flush()
         await self.session.refresh(db_strategy)
         return db_strategy
+
+
+class VulnerabilityCorrelationRepository:
+    """Repository for vulnerability correlation patterns."""
+
+    def __init__(self, session: AsyncSession):
+        """Initialize with database session.
+
+        Args:
+            session: SQLAlchemy async session
+        """
+        self.session = session
+
+    async def create_correlation(
+        self, correlation_data: VulnerabilityCorrelationCreate
+    ) -> VulnerabilityCorrelation:
+        """Create a new vulnerability correlation pattern.
+
+        Args:
+            correlation_data: Vulnerability correlation data
+
+        Returns:
+            Created vulnerability correlation
+        """
+        correlation = VulnerabilityCorrelation(
+            name=correlation_data.name,
+            description=correlation_data.description,
+            pattern_type=correlation_data.pattern_type,
+            pattern_definition=correlation_data.pattern_definition,
+            severity_adjustment=correlation_data.severity_adjustment,
+            confidence=correlation_data.confidence,
+            context_type=correlation_data.context_type,
+            is_active=correlation_data.is_active,
+            correlation_metadata=correlation_data.metadata,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        )
+        self.session.add(correlation)
+        await self.session.flush()
+        await self.session.refresh(correlation)
+        return correlation
+
+    async def get_correlation(
+        self, correlation_id: int
+    ) -> Optional[VulnerabilityCorrelation]:
+        """Get a vulnerability correlation by ID.
+
+        Args:
+            correlation_id: Vulnerability correlation ID
+
+        Returns:
+            Vulnerability correlation or None if not found
+        """
+        result = await self.session.execute(
+            select(VulnerabilityCorrelation).where(
+                VulnerabilityCorrelation.id == correlation_id
+            )
+        )
+        correlation: Optional[VulnerabilityCorrelation] = result.scalars().first()
+        return correlation
+
+    async def get_correlations_by_context_type(
+        self, context_type: ContextType, active_only: bool = True
+    ) -> List[VulnerabilityCorrelation]:
+        """Get vulnerability correlations by context type.
+
+        Args:
+            context_type: Context type
+            active_only: Whether to return only active correlations
+
+        Returns:
+            List of vulnerability correlations
+        """
+        query = select(VulnerabilityCorrelation).where(
+            VulnerabilityCorrelation.context_type == context_type
+        )
+        if active_only:
+            query = query.where(VulnerabilityCorrelation.is_active)
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
+
+    async def get_active_correlations(self) -> List[VulnerabilityCorrelation]:
+        """Get all active vulnerability correlations.
+
+        Returns:
+            List of active vulnerability correlations
+        """
+        result = await self.session.execute(
+            select(VulnerabilityCorrelation).where(VulnerabilityCorrelation.is_active)
+        )
+        return list(result.scalars().all())
+
+    async def update_correlation(
+        self, correlation_id: int, correlation_data: dict
+    ) -> Optional[VulnerabilityCorrelation]:
+        """Update a vulnerability correlation.
+
+        Args:
+            correlation_id: Vulnerability correlation ID
+            correlation_data: Vulnerability correlation update data
+
+        Returns:
+            Updated vulnerability correlation or None if not found
+        """
+        db_correlation = await self.get_correlation(correlation_id)
+        if not db_correlation:
+            return None
+
+        # Update fields if provided
+        for key, value in correlation_data.items():
+            if hasattr(db_correlation, key):
+                setattr(db_correlation, key, value)
+
+        db_correlation.updated_at = datetime.utcnow()
+        self.session.add(db_correlation)
+        await self.session.flush()
+        await self.session.refresh(db_correlation)
+        return db_correlation
+
+    async def delete_correlation(self, correlation_id: int) -> bool:
+        """Delete a vulnerability correlation.
+
+        Args:
+            correlation_id: Vulnerability correlation ID
+
+        Returns:
+            True if deleted, False if not found
+        """
+        db_correlation = await self.get_correlation(correlation_id)
+        if not db_correlation:
+            return False
+
+        await self.session.delete(db_correlation)
+        await self.session.flush()
+        return True
+
+
+class AdaptiveRuleRepository:
+    """Repository for adaptive rules."""
+
+    def __init__(self, session: AsyncSession):
+        """Initialize with database session.
+
+        Args:
+            session: SQLAlchemy async session
+        """
+        self.session = session
+
+    async def create_adaptive_rule(self, rule_data: AdaptiveRuleCreate) -> AdaptiveRule:
+        """Create a new adaptive rule.
+
+        Args:
+            rule_data: Adaptive rule data
+
+        Returns:
+            Created adaptive rule
+        """
+        rule = AdaptiveRule(
+            base_rule_id=rule_data.base_rule_id,
+            name=rule_data.name,
+            description=rule_data.description,
+            rule_type=rule_data.rule_type,
+            conditions=rule_data.conditions,
+            actions=rule_data.actions,
+            confidence=rule_data.confidence,
+            is_active=rule_data.is_active,
+            adaptive_metadata=rule_data.metadata,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        )
+        self.session.add(rule)
+        await self.session.flush()
+        await self.session.refresh(rule)
+        return rule
+
+    async def get_adaptive_rule(self, rule_id: int) -> Optional[AdaptiveRule]:
+        """Get an adaptive rule by ID.
+
+        Args:
+            rule_id: Adaptive rule ID
+
+        Returns:
+            Adaptive rule or None if not found
+        """
+        result = await self.session.execute(
+            select(AdaptiveRule).where(AdaptiveRule.id == rule_id)
+        )
+        rule: Optional[AdaptiveRule] = result.scalars().first()
+        return rule
+
+    async def get_adaptive_rules_by_type(
+        self, rule_type: str, active_only: bool = True
+    ) -> List[AdaptiveRule]:
+        """Get adaptive rules by type.
+
+        Args:
+            rule_type: Rule type
+            active_only: Whether to return only active rules
+
+        Returns:
+            List of adaptive rules
+        """
+        query = select(AdaptiveRule).where(AdaptiveRule.rule_type == rule_type)
+        if active_only:
+            query = query.where(AdaptiveRule.is_active)
+        # Order by effectiveness score (higher first)
+        query = query.order_by(AdaptiveRule.effectiveness_score.desc())
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
+
+    async def get_adaptive_rules_by_base_rule(
+        self, base_rule_id: int, active_only: bool = True
+    ) -> List[AdaptiveRule]:
+        """Get adaptive rules by base rule ID.
+
+        Args:
+            base_rule_id: Base rule ID
+            active_only: Whether to return only active rules
+
+        Returns:
+            List of adaptive rules
+        """
+        query = select(AdaptiveRule).where(AdaptiveRule.base_rule_id == base_rule_id)
+        if active_only:
+            query = query.where(AdaptiveRule.is_active)
+        # Order by version (higher first)
+        query = query.order_by(AdaptiveRule.version.desc())
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
+
+    async def get_most_effective_rules(
+        self, limit: int = 10, active_only: bool = True
+    ) -> List[AdaptiveRule]:
+        """Get the most effective adaptive rules.
+
+        Args:
+            limit: Maximum number of rules to return
+            active_only: Whether to return only active rules
+
+        Returns:
+            List of adaptive rules ordered by effectiveness
+        """
+        query = select(AdaptiveRule)
+        if active_only:
+            query = query.where(AdaptiveRule.is_active)
+        # Order by effectiveness score (higher first)
+        query = query.order_by(AdaptiveRule.effectiveness_score.desc()).limit(limit)
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
+
+    async def update_adaptive_rule(
+        self, rule_id: int, update_data: dict
+    ) -> Optional[AdaptiveRule]:
+        """Update an adaptive rule.
+
+        Args:
+            rule_id: Adaptive rule ID
+            update_data: Update data dictionary
+
+        Returns:
+            Updated adaptive rule or None if not found
+        """
+        db_rule = await self.get_adaptive_rule(rule_id)
+        if not db_rule:
+            return None
+
+        # Update fields if provided
+        for key, value in update_data.items():
+            if hasattr(db_rule, key):
+                setattr(db_rule, key, value)
+
+        db_rule.updated_at = datetime.utcnow()
+        self.session.add(db_rule)
+        await self.session.flush()
+        await self.session.refresh(db_rule)
+        return db_rule
+
+    async def update_rule_effectiveness(
+        self, rule_id: int, success: bool
+    ) -> Optional[AdaptiveRule]:
+        """Update an adaptive rule's effectiveness based on success or failure.
+
+        Args:
+            rule_id: Adaptive rule ID
+            success: Whether the rule was successful
+
+        Returns:
+            Updated adaptive rule or None if not found
+        """
+        db_rule = await self.get_adaptive_rule(rule_id)
+        if not db_rule:
+            return None
+
+        # Update success or failure count
+        if success:
+            db_rule.success_count += 1
+        else:
+            db_rule.failure_count += 1
+
+        # Calculate new effectiveness score
+        total_executions = db_rule.success_count + db_rule.failure_count
+        if total_executions > 0:
+            db_rule.effectiveness_score = db_rule.success_count / total_executions
+        else:
+            db_rule.effectiveness_score = 0.5  # Default score for no executions
+
+        db_rule.updated_at = datetime.utcnow()
+        self.session.add(db_rule)
+        await self.session.flush()
+        await self.session.refresh(db_rule)
+        return db_rule
+
+    async def create_evolved_rule(
+        self, base_rule_id: int, modifications: dict
+    ) -> Optional[AdaptiveRule]:
+        """Create a new evolved version of an existing rule.
+
+        Args:
+            base_rule_id: ID of the rule to evolve
+            modifications: Dictionary of modifications to apply
+
+        Returns:
+            Newly created evolved rule or None if base rule not found
+        """
+        base_rule = await self.get_adaptive_rule(base_rule_id)
+        if not base_rule:
+            return None
+
+        # Get the latest version of this rule lineage
+        descendants = await self.get_adaptive_rules_by_base_rule(
+            base_rule.base_rule_id or base_rule_id
+        )
+        latest_version = max([r.version for r in descendants] + [base_rule.version])
+
+        # Create a new rule with modifications applied
+        new_rule_data = AdaptiveRuleCreate(
+            base_rule_id=base_rule.base_rule_id or base_rule_id,
+            name=f"{base_rule.name} (Evolved v{latest_version + 1})",
+            description=base_rule.description,
+            rule_type=base_rule.rule_type,
+            conditions=dict(base_rule.conditions),  # Create a copy
+            actions=dict(base_rule.actions),  # Create a copy
+            confidence=base_rule.confidence,
+            is_active=True,
+            metadata={
+                "evolved_from": base_rule_id,
+                "evolution_reason": modifications.get("reason", "Rule evolution"),
+                "parent_effectiveness": base_rule.effectiveness_score,
+                **base_rule.adaptive_metadata,
+            },
+        )
+
+        # Apply modifications
+        if "conditions" in modifications:
+            for k, v in modifications["conditions"].items():
+                new_rule_data.conditions[k] = v
+        if "actions" in modifications:
+            for k, v in modifications["actions"].items():
+                new_rule_data.actions[k] = v
+        if "name" in modifications:
+            new_rule_data.name = modifications["name"]
+        if "description" in modifications:
+            new_rule_data.description = modifications["description"]
+
+        # Create the new rule
+        new_rule = await self.create_adaptive_rule(new_rule_data)
+
+        # Set the version
+        await self.update_adaptive_rule(new_rule.id, {"version": latest_version + 1})
+
+        # Deactivate the previous rule if requested
+        if modifications.get("deactivate_parent", True):
+            await self.update_adaptive_rule(base_rule_id, {"is_active": False})
+
+        return await self.get_adaptive_rule(new_rule.id)
+
+    async def delete_adaptive_rule(self, rule_id: int) -> bool:
+        """Delete an adaptive rule.
+
+        Args:
+            rule_id: Adaptive rule ID
+
+        Returns:
+            True if deleted, False if not found
+        """
+        db_rule = await self.get_adaptive_rule(rule_id)
+        if not db_rule:
+            return False
+
+        await self.session.delete(db_rule)
+        await self.session.flush()
+        return True
+
+
+class ContextualScoreRepository:
+    """Repository for contextual scoring rules."""
+
+    def __init__(self, session: AsyncSession):
+        """Initialize with database session.
+
+        Args:
+            session: SQLAlchemy async session
+        """
+        self.session = session
+
+    async def create_score(self, score_data: ContextualScoreCreate) -> ContextualScore:
+        """Create a new contextual scoring rule.
+
+        Args:
+            score_data: Contextual score data
+
+        Returns:
+            Created contextual score
+        """
+        score = ContextualScore(
+            name=score_data.name,
+            description=score_data.description,
+            context_type=score_data.context_type,
+            context_definition=score_data.context_definition,
+            scoring_function=score_data.scoring_function,
+            is_active=score_data.is_active,
+            score_metadata=score_data.metadata,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        )
+        self.session.add(score)
+        await self.session.flush()
+        await self.session.refresh(score)
+        return score
+
+    async def get_score(self, score_id: int) -> Optional[ContextualScore]:
+        """Get a contextual score by ID.
+
+        Args:
+            score_id: Contextual score ID
+
+        Returns:
+            Contextual score or None if not found
+        """
+        result = await self.session.execute(
+            select(ContextualScore).where(ContextualScore.id == score_id)
+        )
+        score: Optional[ContextualScore] = result.scalars().first()
+        return score
+
+    async def get_scores_by_context_type(
+        self, context_type: ContextType, active_only: bool = True
+    ) -> List[ContextualScore]:
+        """Get contextual scores by context type.
+
+        Args:
+            context_type: Context type
+            active_only: Whether to return only active scores
+
+        Returns:
+            List of contextual scores
+        """
+        query = select(ContextualScore).where(
+            ContextualScore.context_type == context_type
+        )
+        if active_only:
+            query = query.where(ContextualScore.is_active)
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
+
+    async def get_active_scores(self) -> List[ContextualScore]:
+        """Get all active contextual scores.
+
+        Returns:
+            List of active contextual scores
+        """
+        result = await self.session.execute(
+            select(ContextualScore).where(ContextualScore.is_active)
+        )
+        return list(result.scalars().all())
+
+    async def update_score(
+        self, score_id: int, update_data: dict
+    ) -> Optional[ContextualScore]:
+        """Update a contextual score.
+
+        Args:
+            score_id: Contextual score ID
+            update_data: Update data dictionary
+
+        Returns:
+            Updated contextual score or None if not found
+        """
+        db_score = await self.get_score(score_id)
+        if not db_score:
+            return None
+
+        # Update fields if provided
+        for key, value in update_data.items():
+            if hasattr(db_score, key):
+                setattr(db_score, key, value)
+
+        db_score.updated_at = datetime.utcnow()
+        self.session.add(db_score)
+        await self.session.flush()
+        await self.session.refresh(db_score)
+        return db_score
+
+    async def delete_score(self, score_id: int) -> bool:
+        """Delete a contextual score.
+
+        Args:
+            score_id: Contextual score ID
+
+        Returns:
+            True if deleted, False if not found
+        """
+        db_score = await self.get_score(score_id)
+        if not db_score:
+            return False
+
+        await self.session.delete(db_score)
+        await self.session.flush()
+        return True
