@@ -781,7 +781,9 @@ class TestEndToEndWorkflow:
         # Perform service detection
         ports = await port_repo.get_ports_by_target(new_target.id)
         for port in ports:
-            await service_detector.detect_service(port)
+            await service_detector.detect_service(
+                new_target.ip_address, port.port_number, port.protocol
+            )
 
         # Complete reconnaissance task
         await orchestration_service.update_task_status(
