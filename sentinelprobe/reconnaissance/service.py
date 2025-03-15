@@ -123,18 +123,20 @@ class ReconnaissanceService:
 
     async def scan_target(
         self, target_id: int, ports: Optional[List[int]] = None
-    ) -> TargetResponse:
+    ) -> Optional[TargetResponse]:
         """
-        Scan a target for open ports and services.
+        Scan a target for open ports.
 
         Args:
             target_id: Target ID
-            ports: List of ports to scan (optional)
+            ports: Optional list of ports to scan
 
         Returns:
-            TargetResponse: Updated target with scan results
+            TargetResponse: Updated target with scan results or None if target not found
         """
         target = await self.scanner_service.scan_target(target_id, ports)
+        if not target:
+            return None
         return self._target_to_response(target)
 
     async def create_port(self, port_data: PortCreate) -> PortResponse:
