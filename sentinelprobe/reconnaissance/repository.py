@@ -1,4 +1,4 @@
-"""Repository implementations for the Reconnaissance module."""
+"""Repository layer for the Reconnaissance module."""
 
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -425,3 +425,26 @@ class ServiceRepository:
         await self.session.delete(service)
         await self.session.commit()
         return True
+
+    async def get_services_by_target_and_type(
+        self, target_id: int, service_type: ServiceType
+    ) -> List[Service]:
+        """
+        Get services by target ID and service type.
+
+        Args:
+            target_id: Target ID
+            service_type: Service type
+
+        Returns:
+            List[Service]: List of services matching the criteria
+        """
+        query = (
+            select(Service)
+            .join(Port, Service.port_id == Port.id)
+            .where(Port.target_id == target_id)
+            .where(Service.service_type == service_type)
+        )
+        result = await self.session.execute(query)
+        services = list(result.scalars().all())
+        return services

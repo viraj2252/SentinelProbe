@@ -415,3 +415,45 @@ class MockServiceRepository:
                 await self.session.commit()
                 return True
         return False
+
+    async def get_services_by_target_and_type(
+        self, target_id: int, service_type: ServiceType
+    ) -> List[Service]:
+        """
+        Get services by target ID and service type.
+
+        Args:
+            target_id: Target ID
+            service_type: Service type
+
+        Returns:
+            List[Service]: List of services matching the criteria
+        """
+        # Ensure services attribute exists on session
+        if not hasattr(self.session, "services"):
+            self.session.services = []
+
+        # If ports attribute doesn't exist, we can't match target IDs
+        if not hasattr(self.session, "ports"):
+            self.session.ports = []
+
+        # Filter services based on port's target_id and service_type
+        matching_services = []
+
+        for service in self.session.services:
+            # Find the port for this service
+            port = None
+            for p in self.session.ports:
+                if p.id == service.port_id:
+                    port = p
+                    break
+
+            # Check if the port belongs to the target and service type matches
+            if (
+                port
+                and port.target_id == target_id
+                and service.service_type == service_type
+            ):
+                matching_services.append(service)
+
+        return matching_services
