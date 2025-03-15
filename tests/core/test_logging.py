@@ -88,14 +88,13 @@ def test_configure_logging_with_custom_level(monkeypatch):
     configure_logging()
 
     # Check if logger was configured correctly
-    mock_logger.configure.assert_called_once()
+    mock_logger.remove.assert_called_once()
+    mock_logger.add.assert_called()
 
-    # Get the call arguments
-    args, kwargs = mock_logger.configure.call_args
-    handlers = kwargs.get("handlers", [])
-
-    # Check if there's at least one handler
-    assert len(handlers) > 0
-
-    # Check if the level is set correctly in the handler
-    assert any("DEBUG" in str(h) for h in handlers)
+    # Verify the log level was used
+    for call in mock_logger.add.call_args_list:
+        args, kwargs = call
+        assert "level" in kwargs
+        # The first call should have DEBUG level
+        if mock_logger.add.call_count == 1 or call == mock_logger.add.call_args_list[0]:
+            assert kwargs["level"] == "DEBUG"
