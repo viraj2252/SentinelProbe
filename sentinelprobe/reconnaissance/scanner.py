@@ -205,6 +205,17 @@ class PortScannerService:
         # Use provided ports or default to common ports
         ports_to_scan = ports if ports else list(self.common_ports.keys())
 
+        # Ensure target has an IP address
+        if not target.ip_address:
+            # Update target status to failed if IP address is missing
+            result = await self.target_repository.update_target(
+                target_id=target_id,
+                status=TargetStatus.FAILED,
+                metadata={**target.target_metadata, "error": "Missing IP address"},
+            )
+            assert result is not None, "Target was found previously but is now None"
+            return result
+
         # Scan ports concurrently
         scan_tasks = [self.scan_port(target.ip_address, port) for port in ports_to_scan]
 
@@ -229,7 +240,7 @@ class PortScannerService:
             open_ports_count += 1
 
             # If port is open, attempt service detection
-            if status == PortStatus.OPEN:
+            if status == PortStatus.OPEN and target.ip_address:
                 service_info = await self.detect_service(
                     target.ip_address, port_number, "tcp"
                 )
