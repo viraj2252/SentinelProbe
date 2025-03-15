@@ -21,6 +21,11 @@ from sentinelprobe.ai_decision.repository import (
     TestStrategyRepository,
 )
 from sentinelprobe.reconnaissance.models import ServiceType
+from sentinelprobe.vulnerability_scanner.models import (
+    Vulnerability,
+    VulnerabilitySeverity,
+)
+from sentinelprobe.vulnerability_scanner.service import VulnerabilityScannerService
 
 logger = logging.getLogger(__name__)
 
@@ -440,3 +445,190 @@ class DecisionEngineService:
             default_rules.append(scan_rule)
 
         return default_rules
+
+    async def analyze_vulnerability_prioritization(
+        self, target_id: int, job_id: int
+    ) -> Optional[TestStrategy]:
+        """Analyze vulnerabilities and create a test strategy based on prioritization.
+
+        Args:
+            target_id: The target ID to analyze vulnerabilities for
+            job_id: The job ID associated with the test strategy
+
+        Returns:
+            Created test strategy or None if no vulnerabilities found
+        """
+        # Create vulnerability scanner service
+        vuln_service = VulnerabilityScannerService(self.session)
+
+        # Get prioritized vulnerabilities
+        prioritized_vulns = await vuln_service.prioritize_target_vulnerabilities(
+            target_id=target_id, include_business_impact=True
+        )
+
+        if not prioritized_vulns:
+            logger.info(f"No vulnerabilities found for target {target_id}")
+            return None
+
+        # Extract top vulnerabilities (up to 5)
+        top_vulns = prioritized_vulns[:5]
+
+        # Prepare test strategy parameters
+        parameters = {
+            "prioritized_vulnerabilities": [
+                {
+                    "id": vuln.id,
+                    "name": vuln.name,
+                    "severity": vuln.severity.value,
+                    "priority_score": score,
+                    "affected_component": vuln.affected_component,
+                    "status": vuln.status.value,
+                }
+                for vuln, score in top_vulns
+            ],
+            "target_id": target_id,
+            "strategy_approach": "prioritized_testing",
+        }
+
+        # Create test strategy based on vulnerability prioritization
+        strategy_data = TestStrategyCreate(
+            job_id=job_id,
+            name="Prioritized Vulnerability Testing",
+            description="Test strategy based on vulnerability prioritization algorithm",
+            phase=StrategyPhase.EXPLOITATION,
+            parameters=parameters,
+            is_active=True,
+            priority=50,  # Higher priority than default strategies
+        )
+
+        strategy = await self.strategy_repo.create_strategy(strategy_data)
+        logger.info(
+            f"Created prioritized vulnerability testing strategy {strategy.id} "
+            f"with {len(top_vulns)} prioritized vulnerabilities"
+        )
+
+        return strategy
+
+    async def create_vulnerability_based_rules(
+        self, prioritized_vulnerabilities: List[Tuple[Vulnerability, float]]
+    ) -> List[DecisionRule]:
+        """
+        Create decision rules based on prioritized vulnerabilities.
+
+        Args:
+            prioritized_vulnerabilities: List of tuples containing vulnerabilities and their priority scores
+
+        Returns:
+            List of created decision rules
+        """
+        rules = []
+
+        # Get top vulnerabilities (high priority)
+        top_vulnerabilities = prioritized_vulnerabilities[:5]
+
+        if not top_vulnerabilities:
+            return []
+
+        # Create a rule for critical/high vulnerabilities
+        high_priority_vulns = [
+            v
+            for v, score in top_vulnerabilities
+            if v.severity
+            in (VulnerabilitySeverity.CRITICAL, VulnerabilitySeverity.HIGH)
+        ]
+
+        if high_priority_vulns:
+            # Create a rule for high priority vulnerabilities
+            high_rule = await self.rule_repo.create_rule(
+                DecisionRuleCreate(
+                    name="Focus on Critical Vulnerabilities",
+                    description=(
+                        "Prioritize testing for critical and high severity vulnerabilities"
+                    ),
+                    rule_type="vulnerability_prioritization",
+                    conditions={
+                        "vulnerability_ids": [v.id for v in high_priority_vulns],
+                        "min_priority_score": 0.7,
+                    },
+                    actions={
+                        "test_priority": "high",
+                        "suggested_tools": [
+                            "manual_testing",
+                            "specialized_scanner",
+                        ],
+                        "suggested_techniques": [
+                            "deep_inspection",
+                            "exploit_verification",
+                        ],
+                    },
+                    metadata={
+                        "vulnerability_count": len(high_priority_vulns),
+                        "average_cvss": (
+                            sum(v.cvss_score or 0 for v in high_priority_vulns)
+                            / len(high_priority_vulns)
+                            if high_priority_vulns
+                            else 0
+                        ),
+                    },
+                )
+            )
+            rules.append(high_rule)
+
+        # Create a rule for medium/low vulnerabilities with specific patterns
+        medium_low_vulns = [
+            v
+            for v, score in prioritized_vulnerabilities
+            if v.severity in (VulnerabilitySeverity.MEDIUM, VulnerabilitySeverity.LOW)
+        ][
+            :10
+        ]  # Limit to 10
+
+        if medium_low_vulns:
+            # Group by type/pattern
+            grouped_vulns: Dict[str, List[Vulnerability]] = {}
+            for vuln in medium_low_vulns:
+                vuln_type = vuln.name.split()[0] if vuln.name else "Unknown"
+                if vuln_type not in grouped_vulns:
+                    grouped_vulns[vuln_type] = []
+                grouped_vulns[vuln_type].append(vuln)
+
+            # Find the most common type
+            if grouped_vulns:
+                most_common_type = max(grouped_vulns.items(), key=lambda x: len(x[1]))[
+                    0
+                ]
+                common_vulns = grouped_vulns[most_common_type]
+
+                if len(common_vulns) >= 2:  # If we have at least 2 of the same type
+                    pattern_rule = await self.rule_repo.create_rule(
+                        DecisionRuleCreate(
+                            name=f"Check for {most_common_type} Patterns",
+                            description=(
+                                f"Multiple {most_common_type} vulnerabilities detected. "
+                                "Test for similar patterns."
+                            ),
+                            rule_type="vulnerability_pattern",
+                            conditions={
+                                "vulnerability_ids": [v.id for v in common_vulns],
+                                "vulnerability_type": most_common_type,
+                            },
+                            actions={
+                                "test_priority": "medium",
+                                "suggested_tools": [
+                                    "automated_scanner",
+                                    "pattern_analysis",
+                                ],
+                                "suggested_techniques": [
+                                    "pattern_testing",
+                                    "broad_coverage",
+                                ],
+                            },
+                            metadata={
+                                "pattern_type": most_common_type,
+                                "vulnerability_count": len(common_vulns),
+                            },
+                        )
+                    )
+                    rules.append(pattern_rule)
+
+        return rules
