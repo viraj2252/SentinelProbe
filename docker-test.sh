@@ -38,4 +38,4 @@ docker stop sentinelprobe-test
 docker rm sentinelprobe-test
 
 echo "Docker test completed successfully!"
-echo "To run the full application stack, use: docker-compose up -d" 
+echo "To run the full application stack, use: docker-compose up -d"

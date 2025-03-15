@@ -208,7 +208,7 @@ def fix_specific_files():
 
 
 def main():
-    """Main function to fix imports."""
+    """Run the main function to fix imports."""
     try:
         # Fix specific files first
         fix_specific_files()

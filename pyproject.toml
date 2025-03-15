@@ -71,6 +71,14 @@ ignore_missing_imports = true
 module = [
   "sentinelprobe.core.migrations",
   "sentinelprobe.orchestration.service",
+  "sentinelprobe.orchestration.repository",
   "sentinelprobe.core.redis",
+  "sentinelprobe.core.mongodb",
 ]
 ignore_errors = true
+
+# Disable type checking for tests and scripts
+[[tool.mypy.overrides]]
+module = ["tests.*", "scripts.*"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false

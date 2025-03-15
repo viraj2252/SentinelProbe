@@ -4,7 +4,6 @@
 import os
 import re
 import sys
-from pathlib import Path
 
 
 def fix_trailing_whitespace(file_path):
@@ -74,7 +73,7 @@ def process_files(base_dir=None):
 
 
 def main():
-    """Main function."""
+    """Execute the main function to fix linting issues."""
     if len(sys.argv) > 1:
         process_files(sys.argv[1])
     else:

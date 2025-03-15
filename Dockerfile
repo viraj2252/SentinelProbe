@@ -43,4 +43,4 @@ RUN mkdir -p /app/logs && \
 EXPOSE 8000
 
 # Set the entrypoint
-CMD ["python", "-m", "sentinelprobe"] 
+CMD ["python", "-m", "sentinelprobe"]

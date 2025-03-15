@@ -14,11 +14,11 @@ flowchart TD
     H <--> D
     H <--> E
     H <--> F
-    
+
     I[(Vulnerability Database)] <--> H
     J[(Attack Patterns DB)] <--> H
     K[Learning Module] <--> H
-    
+
     L[Security Team Dashboard] <--> B
     L <--> G
 ```
