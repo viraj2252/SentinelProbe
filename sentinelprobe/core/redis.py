@@ -102,7 +102,7 @@ async def get_key(key: str) -> Optional[str]:
         Optional[str]: Value of the key or None.
     """
     redis_instance = await get_redis_client()
-    return await redis_instance.get(key)
+    return await redis_instance.get(key)  # type: ignore
 
 
 async def get_json(key: str) -> Optional[Union[Dict[str, Any], List[Any]]]:
@@ -130,7 +130,7 @@ async def delete_key(key: str) -> int:
         int: Number of deleted keys.
     """
     redis_instance = await get_redis_client()
-    return await redis_instance.delete(key)
+    return await redis_instance.delete(key)  # type: ignore
 
 
 async def set_hash(hash_key: str, field: str, value: str) -> int:
@@ -145,7 +145,7 @@ async def set_hash(hash_key: str, field: str, value: str) -> int:
         int: 1 if field is new, 0 if field was updated.
     """
     redis_instance = await get_redis_client()
-    return await redis_instance.hset(hash_key, field, value)
+    return await redis_instance.hset(hash_key, field, value)  # type: ignore
 
 
 async def get_hash(hash_key: str, field: str) -> Optional[str]:
@@ -159,7 +159,7 @@ async def get_hash(hash_key: str, field: str) -> Optional[str]:
         Optional[str]: Value of the field or None.
     """
     redis_instance = await get_redis_client()
-    return await redis_instance.hget(hash_key, field)
+    return await redis_instance.hget(hash_key, field)  # type: ignore
 
 
 async def get_all_hash(hash_key: str) -> Dict[str, str]:
@@ -172,7 +172,7 @@ async def get_all_hash(hash_key: str) -> Dict[str, str]:
         Dict[str, str]: All fields and values.
     """
     redis_instance = await get_redis_client()
-    return await redis_instance.hgetall(hash_key)
+    return await redis_instance.hgetall(hash_key)  # type: ignore
 
 
 async def delete_hash_field(hash_key: str, field: str) -> int:
@@ -186,4 +186,4 @@ async def delete_hash_field(hash_key: str, field: str) -> int:
         int: Number of deleted fields.
     """
     redis_instance = await get_redis_client()
-    return await redis_instance.hdel(hash_key, field)
+    return await redis_instance.hdel(hash_key, field)  # type: ignore

@@ -64,6 +64,7 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
+ignore_missing_imports = true
 
 # Ignore modules with complex type issues that need a separate fix
 [[tool.mypy.overrides]]

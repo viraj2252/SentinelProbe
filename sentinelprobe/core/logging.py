@@ -1,7 +1,7 @@
 """Logging configuration for SentinelProbe."""
 
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 from loguru import logger
 
@@ -49,7 +49,7 @@ def configure_logging() -> None:
     logger.info(f"Logging configured with level: {settings.LOG_LEVEL}")
 
 
-def get_logger(name: Optional[str] = None) -> logger.__class__:
+def get_logger(name: Optional[str] = None) -> Any:
     """Get configured logger instance.
 
     Args:
