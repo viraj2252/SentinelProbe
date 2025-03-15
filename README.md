@@ -1,5 +1,7 @@
 # SentinelProbe
 
+![CI](https://github.com/yourusername/sentinelprobe/workflows/CI/badge.svg)
+
 AI-Powered Penetration Testing System
 
 ## Overview
@@ -71,6 +73,29 @@ The system consists of the following core components:
    python -m sentinelprobe
    ```
 
+### Docker Setup
+
+You can also run SentinelProbe using Docker:
+
+1. Build and run using Docker Compose:
+
+   ```
+   docker-compose up -d
+   ```
+
+2. Or build and run the Docker image directly:
+
+   ```
+   docker build -t sentinelprobe .
+   docker run -p 8000:8000 --env-file .env sentinelprobe
+   ```
+
+3. Test the Docker setup:
+
+   ```
+   ./docker-test.sh
+   ```
+
 ## Development
 
 ### Setup Development Environment
@@ -92,6 +117,15 @@ The system consists of the following core components:
 ```
 pytest
 ```
+
+### CI/CD Pipeline
+
+The project uses GitHub Actions for continuous integration and testing:
+
+- Automatic testing on push to main branch and pull requests
+- Code quality checks (linting, formatting, type checking)
+- Test coverage reporting
+- Docker image building and testing
 
 ## License
 

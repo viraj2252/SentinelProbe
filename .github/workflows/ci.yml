@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sentinelprobe_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      mongodb:
+        image: mongo:5
+        ports:
+          - 27017:27017
+
+      redis:
+        image: redis:6
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: 1.7.1
+
+      - name: Install dependencies
+        run: |
+          poetry install --no-interaction
+
+      - name: Lint with flake8
+        run: |
+          poetry run flake8 sentinelprobe tests
+
+      - name: Check formatting with black
+        run: |
+          poetry run black --check sentinelprobe tests
+
+      - name: Check imports with isort
+        run: |
+          poetry run isort --check sentinelprobe tests
+
+      - name: Type check with mypy
+        run: |
+          poetry run mypy sentinelprobe
+
+      - name: Test with pytest and generate coverage report
+        env:
+          POSTGRES_SERVER: localhost
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sentinelprobe_test
+          MONGODB_URL: mongodb://localhost:27017/sentinelprobe_test
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+        run: |
+          poetry run pytest --cov=sentinelprobe --cov-report=xml tests/
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          fail_ci_if_error: false
