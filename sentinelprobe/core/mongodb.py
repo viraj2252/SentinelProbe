@@ -35,16 +35,17 @@ async def connect_to_mongo() -> None:
 
     try:
         mongo_client = AsyncIOMotorClient(
-            settings.mongo_uri, serverSelectionTimeoutMS=5000
+            settings.MONGODB_URL, serverSelectionTimeoutMS=5000
         )
 
         # Verify connection
         await mongo_client.server_info()
 
-        # Get database
-        db = mongo_client[settings.mongo_db]
+        # Get database - extract the database name from the URL
+        db_name = settings.MONGODB_URL.split("/")[-1]
+        db = mongo_client[db_name]
 
-        logger.info(f"Connected to MongoDB: {settings.mongo_uri}")
+        logger.info(f"Connected to MongoDB: {settings.MONGODB_URL}")
     except Exception as e:
         logger.error(f"Failed to connect to MongoDB: {e}")
         mongo_client = None

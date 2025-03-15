@@ -61,10 +61,10 @@ async def get_redis_client() -> Redis:
     if redis_client is None:
         settings = get_settings()
         redis_client = Redis(
-            host=settings.redis_host,
-            port=settings.redis_port,
-            password=settings.redis_password,
-            db=settings.redis_db,
+            host=settings.REDIS_HOST,
+            port=settings.REDIS_PORT,
+            password=settings.REDIS_PASSWORD,
+            db=0,  # Use default Redis DB
         )
 
     return redis_client

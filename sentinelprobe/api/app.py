@@ -1,6 +1,7 @@
 """FastAPI application for SentinelProbe."""
 
 from contextlib import asynccontextmanager
+from typing import Any, AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,7 +17,7 @@ settings = get_settings()
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Lifespan context manager for FastAPI application.
 
     Handles startup and shutdown events.

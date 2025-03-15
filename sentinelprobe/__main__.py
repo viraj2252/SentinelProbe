@@ -1,39 +1,41 @@
 """Main entry point for SentinelProbe."""
 
 import argparse
+from argparse import ArgumentParser, Namespace, _SubParsersAction
+from typing import cast
 
 from sentinelprobe.core.logging import configure_logging, get_logger
 
 logger = get_logger(__name__)
 
 
-def add_run_command(subparsers):
+def add_run_command(subparsers: _SubParsersAction) -> ArgumentParser:
     """Add run command to argument parser."""
     run_parser = subparsers.add_parser("run", help="Run the application")
-    return run_parser
+    return cast(ArgumentParser, run_parser)
 
 
-def add_migrate_command(subparsers):
+def add_migrate_command(subparsers: _SubParsersAction) -> ArgumentParser:
     """Add migrate command to argument parser."""
     migrate_parser = subparsers.add_parser("migrate", help="Run database migrations")
-    return migrate_parser
+    return cast(ArgumentParser, migrate_parser)
 
 
-def run_app(args):
+def run_app(args: Namespace) -> None:
     """Run the application."""
     configure_logging()
     logger.info("Starting SentinelProbe application")
     # Implementation will be added later
 
 
-def run_migrations(args):
+def run_migrations(args: Namespace) -> None:
     """Run database migrations."""
     configure_logging()
     logger.info("Running database migrations")
     # Implementation will be added later
 
 
-def main():
+def main() -> None:
     """Run the main application."""
     parser = argparse.ArgumentParser(
         description="SentinelProbe - Monitoring and Alerting System"
