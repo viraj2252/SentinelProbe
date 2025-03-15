@@ -278,6 +278,7 @@ This document outlines the implementation and testing tasks for the SentinelProb
 - [ ] Investigate and fix `test_configure_logging_with_custom_level` in `tests/core/test_logging.py`
 - [x] Ensure all MongoDB tests properly await async functions
 - [x] Fix metadata field naming to use target_metadata and service_metadata for proper type resolution
+- [x] Fix mypy errors in scanner.py by adding checks for None IP addresses
 
 ### Next Steps (Sprint Planning)
 
