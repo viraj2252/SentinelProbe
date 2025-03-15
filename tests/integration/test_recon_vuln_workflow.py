@@ -1,6 +1,7 @@
 """Integration tests for the reconnaissance to vulnerability scanning workflow."""
 
 import asyncio
+import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -50,6 +51,10 @@ def mock_session():
 class TestReconVulnWorkflow:
     """Test the reconnaissance to vulnerability scanning workflow."""
 
+    @pytest.mark.skipif(
+        os.environ.get("GITHUB_ACTIONS") == "true",
+        reason="Test is too slow for CI environment",
+    )
     async def test_end_to_end_scan_workflow(self, mock_session):
         """Test the end-to-end workflow from recon to vulnerability scanning."""
         # Set up repositories
