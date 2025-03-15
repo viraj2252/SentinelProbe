@@ -70,8 +70,8 @@ class PortScannerService:
                 socket.getaddrinfo, hostname, None, socket.AF_INET
             )
             if addr_info:
-                # Extract the first IPv4 address
-                return addr_info[0][4][0]
+                # Extract the first IPv4 address and ensure it's a string
+                return str(addr_info[0][4][0])
             return None
         except socket.gaierror:
             return None
