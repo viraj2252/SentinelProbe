@@ -248,7 +248,6 @@ This document outlines the implementation and testing tasks for the SentinelProb
 ### Integration Testing
 
 - [x] Implement component interface testing
-- [x] Create test fixtures for integration scenarios
 - [ ] Develop workflow validation tests
 
 ### Security Testing
@@ -262,6 +261,14 @@ This document outlines the implementation and testing tasks for the SentinelProb
 - [ ] Develop user scenario test cases
 - [ ] Create automated UI testing
 - [ ] Establish regression testing procedures
+
+### Test Fixes
+
+- [ ] Fix `test_create_schema` and `test_drop_schema` in `tests/core/test_migrations.py` (async mocks issue)
+- [ ] Add `updated_at` column to Task model to fix `test_table_columns` test
+- [ ] Add missing `mock_engine` fixture to fix `test_get_applied_migrations` test
+- [ ] Investigate and fix `test_configure_logging_with_custom_level` in `tests/core/test_logging.py`
+- [x] Ensure all MongoDB tests properly await async functions
 
 ## Development Guidelines
 
