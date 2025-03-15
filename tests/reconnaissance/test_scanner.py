@@ -306,7 +306,9 @@ class TestPortScannerService:
             assert sleep_mock.called
 
     @pytest.mark.asyncio
-    async def test_scan_target_aggressive_mode(self, aggressive_scanner_service, mock_repositories):
+    async def test_scan_target_aggressive_mode(
+        self, aggressive_scanner_service, mock_repositories
+    ):
         """Test scanning a target in aggressive mode."""
         # Mock scan_port to simulate different port statuses
         async def mock_scan_port(ip, port, timeout=None):
@@ -316,9 +318,9 @@ class TestPortScannerService:
                 return port, PortStatus.OPEN
             else:
                 return port, PortStatus.CLOSED
-        
+
         aggressive_scanner_service.scan_port = AsyncMock(side_effect=mock_scan_port)
-        
+
         # Mock detect_service to return service info
         service_info = {
             "service_type": ServiceType.HTTP,
@@ -327,12 +329,12 @@ class TestPortScannerService:
             "banner": "Test Server",
         }
         aggressive_scanner_service.detect_service = AsyncMock(return_value=service_info)
-        
+
         # Mock sleep to track if it's called
         sleep_mock = AsyncMock()
         with patch("asyncio.sleep", sleep_mock):
             # Call scan_target with multiple ports in aggressive mode
             await aggressive_scanner_service.scan_target(1, [80, 443, 8080, 22, 21])
-            
+
             # Verify sleep was not called (aggressive mode doesn't use rate limiting)
             assert not sleep_mock.called
