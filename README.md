@@ -112,6 +112,31 @@ You can also run SentinelProbe using Docker:
    pre-commit install
    ```
 
+### Code Quality Standards
+
+SentinelProbe maintains high code quality standards through automated checks. All code must pass:
+
+- **Black**: Code formatting
+- **isort**: Import sorting
+- **flake8**: Linting and code style (including docstrings)
+- **mypy**: Static type checking
+
+These checks run automatically as pre-commit hooks to prevent committing code with issues.
+
+### Safe Commit Practice
+
+To ensure code quality checks are always run, use the safe-commit script instead of regular git commit:
+
+```
+./scripts/safe-commit.sh -m "Your commit message"
+```
+
+This script:
+
+- Prevents using the `--no-verify` flag which would bypass pre-commit hooks
+- Runs pre-commit checks manually before committing
+- Only proceeds with the commit if all checks pass
+
 ### Running Tests
 
 ```
