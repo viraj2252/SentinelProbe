@@ -20,6 +20,7 @@ from sentinelprobe.reconnaissance.repository import (
     ServiceRepository,
     TargetRepository,
 )
+from sentinelprobe.reconnaissance.service_detector import ServiceDetector
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,9 @@ class PortScannerService:
         self.max_concurrent_scans = max_concurrent_scans
         self.timeout = timeout
         self.aggressive_mode = aggressive_mode
+
+        # Initialize service detector with scan timeout
+        self.service_detector = ServiceDetector(timeout=timeout)
 
         # Default common ports to scan
         self.common_ports: Dict[int, Dict[str, Union[str, ServiceType]]] = {
@@ -135,7 +139,7 @@ class PortScannerService:
                     socket.SOCK_STREAM,
                 )
                 # Extract the first IP address from the result
-                return info[0][4][0]
+                return str(info[0][4][0])
             except (socket.gaierror, IndexError):
                 # Could not resolve hostname
                 logger.warning(f"Failed to resolve hostname {hostname}")
@@ -194,13 +198,41 @@ class PortScannerService:
         Returns:
             Optional[Dict]: Service information or None if detection fails
         """
-        # For now, just map common ports to services based on the dictionary
+        # First, try the advanced service detection
+        try:
+            service_info = await self.service_detector.detect_service(
+                ip_address, port, protocol
+            )
+            if service_info and service_info.get("service_type") != ServiceType.UNKNOWN:
+                service_name = service_info.get("name")
+                service_version = service_info.get("version")
+                logger.info(
+                    f"Service detected on {ip_address}:{port} - "
+                    f"{service_name} {service_version}"
+                )
+                return service_info
+        except Exception as e:
+            logger.error(
+                f"Error in advanced service detection for {ip_address}:{port}: "
+                f"{str(e)}"
+            )
+
+        # Fall back to basic port mapping if advanced detection fails
         if port in self.common_ports:
+            port_name = self.common_ports[port].get("name")
+            logger.info(
+                f"Using common port mapping for {ip_address}:{port} - {port_name}"
+            )
             return self.common_ports[port]
 
-        # In the future, implement more sophisticated service detection
-        # For example, banner grabbing, etc.
-        return None
+        # If all else fails, return unknown service
+        logger.info(f"Unknown service on {ip_address}:{port}")
+        return {
+            "service_type": ServiceType.UNKNOWN,
+            "name": "Unknown",
+            "version": "",
+            "banner": "",
+        }
 
     async def scan_target(
         self,
@@ -347,9 +379,17 @@ class PortScannerService:
                 if status == PortStatus.OPEN:
                     open_ports += 1
 
-                    # Detect service on open port
+                    # Use the new enhanced service detection
                     service_info = await self.detect_service(ip_address, port, "tcp")
                     if service_info:
+                        # Add additional metadata for the service
+                        service_metadata = {}
+
+                        # Include banner in metadata if available
+                        if "banner" in service_info and service_info["banner"]:
+                            service_metadata["raw_banner"] = service_info["banner"]
+
+                        # Create the service record
                         await self.service_repository.create_service(
                             port_id=port_obj.id,
                             service_type=service_info.get(
@@ -358,6 +398,7 @@ class PortScannerService:
                             name=service_info.get("name", "Unknown"),
                             version=service_info.get("version", ""),
                             banner=service_info.get("banner", ""),
+                            metadata=service_metadata,
                         )
 
         # Update target with final metadata
