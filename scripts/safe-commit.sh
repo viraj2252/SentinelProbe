@@ -14,6 +14,13 @@ pre-commit run || {
     exit 1
 }
 
+# Run mypy type checking explicitly
+echo "Running mypy type checking..."
+mypy sentinelprobe/ --config-file=pyproject.toml || {
+    echo "Type checking failed. Please fix type issues before committing."
+    exit 1
+}
+
 # If pre-commit passes, perform the commit
-echo "Pre-commit checks passed. Proceeding with commit..."
+echo "All checks passed! Proceeding with commit..."
 git commit "$@"
