@@ -118,6 +118,41 @@ You can also run SentinelProbe using Docker:
 pytest
 ```
 
+### Code Quality
+
+The project uses several tools to ensure code quality:
+
+1. **Linting with flake8**:
+
+   ```
+   ./scripts/lint.sh
+   ```
+
+2. **Formatting with black and isort**:
+
+   ```
+   black sentinelprobe tests
+   isort sentinelprobe tests
+   ```
+
+3. **Type checking with mypy**:
+
+   ```
+   mypy sentinelprobe
+   ```
+
+4. **Run all checks**:
+
+   ```
+   ./scripts/check.sh
+   ```
+
+Pre-commit hooks are configured to run these checks automatically before each commit. To install the pre-commit hooks:
+
+```
+pre-commit install
+```
+
 ### CI/CD Pipeline
 
 The project uses GitHub Actions for continuous integration and testing:
