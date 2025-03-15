@@ -6,6 +6,7 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from sentinelprobe.api.router import api_router
 from sentinelprobe.core.config import get_settings
 from sentinelprobe.core.db import init_db
 from sentinelprobe.core.logging import configure_logging, get_logger
@@ -66,6 +67,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include API router
+app.include_router(api_router)
 
 
 @app.get("/")

@@ -2,7 +2,7 @@
 
 import enum
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from pydantic import BaseModel
 from sqlalchemy import JSON, DateTime
@@ -11,6 +11,9 @@ from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from sentinelprobe.core.db import Base
+
+if TYPE_CHECKING:
+    from sentinelprobe.reporting.models import Report
 
 
 class JobType(enum.Enum):
@@ -80,6 +83,9 @@ class Job(Base):
     )
     executions: Mapped[List[JobExecution]] = relationship(
         "JobExecution", back_populates="job", cascade="all, delete-orphan"
+    )
+    reports: Mapped[List["Report"]] = relationship(
+        "Report", back_populates="job", cascade="all, delete-orphan"
     )
 
 

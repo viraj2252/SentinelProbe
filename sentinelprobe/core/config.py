@@ -28,6 +28,7 @@ class Settings(BaseSettings):
         REDIS_PORT: Redis server port.
         REDIS_PASSWORD: Redis server password.
         LOG_LEVEL: Logging level.
+        REPORT_DIR: Directory for storing generated reports.
     """
 
     model_config = SettingsConfigDict(
@@ -56,17 +57,8 @@ class Settings(BaseSettings):
     # Logging
     LOG_LEVEL: str = Field(default="INFO")
 
-    @property
-    def postgres_dsn(self) -> str:
-        """Generate PostgreSQL DSN from settings.
-
-        Returns:
-            str: PostgreSQL connection string.
-        """
-        return (
-            f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@"
-            f"{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
-        )
+    # Reports
+    REPORT_DIR: str = Field(default="./reports")
 
     @field_validator("LOG_LEVEL")
     @classmethod
@@ -74,10 +66,10 @@ class Settings(BaseSettings):
         """Validate log level.
 
         Args:
-            v: Log level value.
+            v: Log level.
 
         Returns:
-            str: Validated log level.
+            Validated log level.
 
         Raises:
             ValueError: If log level is invalid.
@@ -87,12 +79,24 @@ class Settings(BaseSettings):
             raise ValueError(f"Invalid log level: {v}. Must be one of {valid_levels}")
         return v.upper()
 
+    @property
+    def postgres_dsn(self) -> str:
+        """Get PostgreSQL DSN.
+
+        Returns:
+            PostgreSQL DSN.
+        """
+        return (
+            f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+            f"@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        )
+
 
 @lru_cache
 def get_settings() -> Settings:
-    """Get application settings with caching.
+    """Get application settings.
 
     Returns:
-        Settings: Application settings instance.
+        Application settings.
     """
     return Settings()
