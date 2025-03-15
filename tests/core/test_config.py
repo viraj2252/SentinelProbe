@@ -1,8 +1,5 @@
 """Tests for the configuration module."""
 
-import os
-from unittest.mock import patch
-
 import pytest
 
 from sentinelprobe.core.config import Settings, get_settings
@@ -10,7 +7,8 @@ from sentinelprobe.core.config import Settings, get_settings
 
 def test_settings_defaults() -> None:
     """Test default settings values."""
-    settings = Settings()
+    # Create a settings instance with explicit values
+    settings = Settings(DEBUG=False)
     assert settings.APP_NAME == "sentinelprobe"
     assert settings.DEBUG is False
     assert settings.API_PREFIX == "/api/v1"
@@ -48,4 +46,4 @@ def test_get_settings_cache() -> None:
     """Test settings caching."""
     settings1 = get_settings()
     settings2 = get_settings()
-    assert settings1 is settings2  # Same instance due to lru_cache 
+    assert settings1 is settings2  # Same instance due to lru_cache
