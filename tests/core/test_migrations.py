@@ -21,12 +21,15 @@ class AsyncContextManagerMock:
     """A mock that can be used as an async context manager."""
 
     def __init__(self, return_value):
+        """Initialize with the value to return from __aenter__."""
         self.return_value = return_value
 
     async def __aenter__(self):
+        """Enter the async context manager and return the stored value."""
         return self.return_value
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Exit the async context manager."""
         return None
 
 
@@ -41,23 +44,48 @@ class MockResult:
         """Return all rows."""
         return self.rows
 
+    def scalars(self):
+        """Return self to support chaining."""
+        return self
+
+    def all(self):
+        """Return all rows."""
+        return self.rows
+
+    def first(self):
+        """Return first row or None."""
+        return self.rows[0] if self.rows else None
+
 
 class MockConnection:
     """Mock SQLAlchemy connection."""
 
     def __init__(self):
-        """Initialize the mock connection."""
-        self.execute_results = {}
-        self.executed = []
+        """Initialize with empty state."""
+        self.tables_before = []
+        self.tables_after = ["job", "task"]
+        self.executed = []  # Track executed queries
 
     async def execute(self, query):
-        """Execute a query and return a mock result."""
+        """Mock execute query."""
+        # Convert query to string and store it for later checking
         query_str = str(query)
         self.executed.append(query_str)
 
-        if "SELECT name FROM migrations" in query_str:
-            return MockResult(self.execute_results.get("migrations", []))
-
+        if "SELECT tablename FROM pg_tables" in query_str:
+            # First call: return empty list
+            # Second call: return tables
+            if not self.tables_before:
+                result = []
+                # Switch for next call
+                self.tables_before = self.tables_after
+            else:
+                result = [(table,) for table in self.tables_before]
+            return MockResult(result)
+        elif "SELECT name FROM migrations" in query_str:
+            return MockResult(
+                self.migrations_result if hasattr(self, "migrations_result") else []
+            )
         return MockResult([])
 
 
@@ -106,7 +134,7 @@ async def test_create_schema():
     """Test creating the database schema."""
     # Create a mock engine
     mock_engine = MagicMock()
-    mock_conn = AsyncMock()
+    mock_conn = MockConnection()
     mock_conn.run_sync = AsyncMock()
 
     # Set up the mock connection for begin with a proper async context manager
@@ -253,11 +281,15 @@ async def mock_engine():
     """Create a mock engine for testing."""
     mock_engine = MagicMock()
     conn = MockConnection()
-    conn.execute_results["migrations"] = [("migration1.py",), ("migration2.py",)]
 
-    # Create a mock async context manager that returns our mock connection
-    async_context = AsyncContextManagerMock(conn)
-    mock_engine.begin = MagicMock(return_value=async_context)
+    # Add a special method for the applied migrations test
+    conn.migrations_result = [("migration1.py",), ("migration2.py",)]
+
+    # No need to override the execute method, MockConnection now handles migrations query
+
+    # Setup both connect and begin methods
+    mock_engine.connect = AsyncMock(return_value=AsyncContextManagerMock(conn))
+    mock_engine.begin = MagicMock(return_value=AsyncContextManagerMock(conn))
 
     return mock_engine
 
