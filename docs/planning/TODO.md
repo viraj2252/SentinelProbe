@@ -277,6 +277,7 @@ This document outlines the implementation and testing tasks for the SentinelProb
 - [ ] Add missing `mock_engine` fixture to fix `test_get_applied_migrations` test
 - [ ] Investigate and fix `test_configure_logging_with_custom_level` in `tests/core/test_logging.py`
 - [x] Ensure all MongoDB tests properly await async functions
+- [x] Fix metadata field naming to use target_metadata and service_metadata for proper type resolution
 
 ### Next Steps (Sprint Planning)
 
