@@ -10,6 +10,7 @@ from sentinelprobe.ai_decision.models import (
     DecisionRuleCreate,
     DecisionRuleResponse,
     DecisionRuleUpdate,
+    KnowledgeItem,
     KnowledgeItemCreate,
     KnowledgeItemResponse,
     KnowledgeItemUpdate,
@@ -43,8 +44,13 @@ async def create_knowledge_item(
     """
     service = DecisionEngineService(session)
     knowledge_repo = service.knowledge_repo
-    created_item = await knowledge_repo.create_knowledge_item(knowledge_item)
-    return created_item
+    created_item: KnowledgeItem = await knowledge_repo.create_knowledge_item(
+        knowledge_item
+    )
+    result: KnowledgeItemResponse = KnowledgeItemResponse.model_validate(
+        created_item.__dict__
+    )
+    return result
 
 
 @router.get("/knowledge/{item_id}", response_model=KnowledgeItemResponse)
@@ -69,7 +75,8 @@ async def get_knowledge_item(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Knowledge item with ID {item_id} not found",
         )
-    return item
+    result: KnowledgeItemResponse = KnowledgeItemResponse.model_validate(item.__dict__)
+    return result
 
 
 @router.put("/knowledge/{item_id}", response_model=KnowledgeItemResponse)
@@ -96,7 +103,10 @@ async def update_knowledge_item(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Knowledge item with ID {item_id} not found",
         )
-    return updated_item
+    result: KnowledgeItemResponse = KnowledgeItemResponse.model_validate(
+        updated_item.__dict__
+    )
+    return result
 
 
 @router.get("/knowledge/target/{target_id}", response_model=List[KnowledgeItemResponse])
@@ -116,7 +126,10 @@ async def get_target_knowledge(
     service = DecisionEngineService(session)
     knowledge_repo = service.knowledge_repo
     items = await knowledge_repo.get_knowledge_items_by_target(target_id)
-    return items
+    result: List[KnowledgeItemResponse] = [
+        KnowledgeItemResponse.model_validate(item.__dict__) for item in items
+    ]
+    return result
 
 
 @router.post("/rules", response_model=DecisionRuleResponse)
@@ -136,7 +149,10 @@ async def create_decision_rule(
     service = DecisionEngineService(session)
     rule_repo = service.rule_repo
     created_rule = await rule_repo.create_rule(rule)
-    return created_rule
+    result: DecisionRuleResponse = DecisionRuleResponse.model_validate(
+        created_rule.__dict__
+    )
+    return result
 
 
 @router.get("/rules/{rule_id}", response_model=DecisionRuleResponse)
@@ -161,7 +177,8 @@ async def get_decision_rule(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Decision rule with ID {rule_id} not found",
         )
-    return rule
+    result: DecisionRuleResponse = DecisionRuleResponse.model_validate(rule.__dict__)
+    return result
 
 
 @router.put("/rules/{rule_id}", response_model=DecisionRuleResponse)
@@ -188,7 +205,10 @@ async def update_decision_rule(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Decision rule with ID {rule_id} not found",
         )
-    return updated_rule
+    result: DecisionRuleResponse = DecisionRuleResponse.model_validate(
+        updated_rule.__dict__
+    )
+    return result
 
 
 @router.get("/rules/type/{rule_type}", response_model=List[DecisionRuleResponse])
@@ -208,7 +228,10 @@ async def get_rules_by_type(
     service = DecisionEngineService(session)
     rule_repo = service.rule_repo
     rules = await rule_repo.get_rules_by_type(rule_type)
-    return rules
+    result: List[DecisionRuleResponse] = [
+        DecisionRuleResponse.model_validate(rule.__dict__) for rule in rules
+    ]
+    return result
 
 
 @router.post("/strategies", response_model=TestStrategyResponse)
@@ -228,7 +251,10 @@ async def create_test_strategy(
     service = DecisionEngineService(session)
     strategy_repo = service.strategy_repo
     created_strategy = await strategy_repo.create_strategy(strategy)
-    return created_strategy
+    result: TestStrategyResponse = TestStrategyResponse.model_validate(
+        created_strategy.__dict__
+    )
+    return result
 
 
 @router.get("/strategies/{strategy_id}", response_model=TestStrategyResponse)
@@ -253,7 +279,10 @@ async def get_test_strategy(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Test strategy with ID {strategy_id} not found",
         )
-    return strategy
+    result: TestStrategyResponse = TestStrategyResponse.model_validate(
+        strategy.__dict__
+    )
+    return result
 
 
 @router.put("/strategies/{strategy_id}", response_model=TestStrategyResponse)
@@ -280,7 +309,10 @@ async def update_test_strategy(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Test strategy with ID {strategy_id} not found",
         )
-    return updated_strategy
+    result: TestStrategyResponse = TestStrategyResponse.model_validate(
+        updated_strategy.__dict__
+    )
+    return result
 
 
 @router.get("/job/{job_id}/strategies", response_model=List[TestStrategyResponse])
@@ -300,7 +332,11 @@ async def get_job_strategies(
     service = DecisionEngineService(session)
     strategy_repo = service.strategy_repo
     strategies = await strategy_repo.get_strategies_by_job(job_id)
-    return strategies
+    result: List[TestStrategyResponse] = [
+        TestStrategyResponse.model_validate(strategy.__dict__)
+        for strategy in strategies
+    ]
+    return result
 
 
 @router.post("/formulate-strategy/{job_id}", response_model=List[TestStrategyResponse])
@@ -319,7 +355,11 @@ async def formulate_job_strategy(
     """
     service = DecisionEngineService(session)
     strategies = await service.formulate_strategy(job_id)
-    return strategies
+    result: List[TestStrategyResponse] = [
+        TestStrategyResponse.model_validate(strategy.__dict__)
+        for strategy in strategies
+    ]
+    return result
 
 
 @router.post("/init-default-rules", response_model=List[DecisionRuleResponse])
@@ -336,7 +376,10 @@ async def initialize_default_rules(
     """
     service = DecisionEngineService(session)
     rules = await service.initialize_default_rules()
-    return rules
+    result: List[DecisionRuleResponse] = [
+        DecisionRuleResponse.model_validate(rule.__dict__) for rule in rules
+    ]
+    return result
 
 
 @router.post(
@@ -365,7 +408,10 @@ async def create_prioritized_vulnerability_strategy(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"No vulnerabilities found for target {target_id}",
         )
-    return strategy
+    result: TestStrategyResponse = TestStrategyResponse.model_validate(
+        strategy.__dict__
+    )
+    return result
 
 
 @router.get(
@@ -512,4 +558,7 @@ async def create_optimized_test_path_rules(
     # Create test strategy
     await decision_service.analyze_vulnerability_prioritization(target_id, job_id)
 
-    return rules
+    result: List[DecisionRuleResponse] = [
+        DecisionRuleResponse.model_validate(rule.__dict__) for rule in rules
+    ]
+    return result

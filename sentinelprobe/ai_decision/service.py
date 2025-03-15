@@ -545,7 +545,8 @@ class DecisionEngineService:
                     description=(
                         "Prioritize testing for critical and high severity vulnerabilities"
                     ),
-                    rule_type="vulnerability_prioritization",
+                    rule_type=DecisionRuleType.EXPLOITATION,
+                    severity=DecisionRuleSeverity.CRITICAL,
                     conditions={
                         "vulnerability_ids": [v.id for v in high_priority_vulns],
                         "min_priority_score": 0.7,
@@ -607,7 +608,8 @@ class DecisionEngineService:
                                 f"Multiple {most_common_type} vulnerabilities detected. "
                                 "Test for similar patterns."
                             ),
-                            rule_type="vulnerability_pattern",
+                            rule_type=DecisionRuleType.EXPLOITATION,
+                            severity=DecisionRuleSeverity.MEDIUM,
                             conditions={
                                 "vulnerability_ids": [v.id for v in common_vulns],
                                 "vulnerability_type": most_common_type,
