@@ -41,17 +41,23 @@ This document outlines the implementation and testing tasks for the SentinelProb
 ### 2.1 Orchestration Engine - Basic
 
 - [x] **Implement**: Create job scheduling system
-- [ ] **Test**: Verify job creation, queuing, and execution
+- [x] **Test**: Verify job creation, queuing, and execution
 - [x] **Implement**: Develop configuration management
 - [x] **Test**: Validate config loading and validation
 - [x] **Implement**: Build state management for testing workflows
-- [ ] **Test**: Verify state transitions and persistence
+- [x] **Test**: Verify state transitions and persistence
 
 ### 2.2 Reconnaissance Module - Basic
 
 - [ ] **Implement**: Network discovery functionality
+  - [ ] Create port scanning module
+  - [ ] Implement target validation
+  - [ ] Develop discovery rate limiting
 - [ ] **Test**: Verify target system identification
 - [ ] **Implement**: Service enumeration capabilities
+  - [ ] Implement service fingerprinting
+  - [ ] Create protocol identification module
+  - [ ] Build version detection functionality
 - [ ] **Test**: Validate service detection accuracy
 - [ ] **Implement**: Data normalization for discovered assets
 - [ ] **Test**: Verify consistent data structure output
@@ -244,11 +250,13 @@ This document outlines the implementation and testing tasks for the SentinelProb
 - [x] Implement pytest-based testing framework
 - [x] Create mocks for external dependencies
 - [x] Develop comprehensive test coverage for core modules
+- [x] Implement mock repositories for isolated testing
 
 ### Integration Testing
 
 - [x] Implement component interface testing
-- [ ] Develop workflow validation tests
+- [ ] Develop orchestration engine integration tests with actual repositories
+- [ ] Build end-to-end workflow tests for basic scanning
 
 ### Security Testing
 
@@ -269,6 +277,16 @@ This document outlines the implementation and testing tasks for the SentinelProb
 - [ ] Add missing `mock_engine` fixture to fix `test_get_applied_migrations` test
 - [ ] Investigate and fix `test_configure_logging_with_custom_level` in `tests/core/test_logging.py`
 - [x] Ensure all MongoDB tests properly await async functions
+
+### Next Steps (Sprint Planning)
+
+#### Immediate Focus: Reconnaissance Module Development
+
+1. Design the Reconnaissance Module API interfaces
+2. Implement network discovery core functionality
+3. Create service enumeration and identification utilities
+4. Develop test fixtures for network scanning
+5. Build integration between Orchestration and Reconnaissance modules
 
 ## Development Guidelines
 

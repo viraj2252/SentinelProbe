@@ -193,6 +193,20 @@ class MockSession:
         # Just a stub for delete operation
         pass
 
+    async def refresh(self, obj):
+        """Mock refresh method."""
+        # Set an ID if it doesn't have one
+        if not hasattr(obj, "id") or obj.id is None:
+            obj.id = len(self.objects)
+
+        # Set created_at if it doesn't have one
+        if hasattr(obj, "created_at") and obj.created_at is None:
+            from datetime import datetime
+
+            obj.created_at = datetime.utcnow()
+
+        return obj
+
 
 class MockAsyncMongoClient:
     """Mock AsyncIOMotorClient"""
