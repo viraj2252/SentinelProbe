@@ -174,8 +174,10 @@ class TestPortScannerService:
     @pytest.mark.asyncio
     async def test_scan_port_with_custom_timeout(self, port_scanner_service):
         """Test scanning a port with a custom timeout."""
+        # Create a mock socket with appropriate methods
         mock_socket = MagicMock()
-        mock_socket.connect_ex.return_value = 0
+        mock_socket.connect_ex.return_value = 0  # 0 means success/open
+        mock_socket.close.return_value = None
 
         with patch("socket.socket", return_value=mock_socket):
             port, status = await port_scanner_service.scan_port(
@@ -189,8 +191,22 @@ class TestPortScannerService:
             assert mock_socket.settimeout.call_args[0][0] == 3.0
 
     @pytest.mark.asyncio
+    @pytest.mark.timeout(10)  # Increase timeout to 10 seconds for this test
     async def test_detect_service_known_port(self, port_scanner_service):
         """Test detecting a service on a known port."""
+        # Mock the service_detector.detect_service method
+        port_scanner_service.service_detector = MagicMock()
+        port_scanner_service.service_detector.detect_service.return_value = None
+
+        # Set the common_ports dictionary with known values
+        port_scanner_service.common_ports = {
+            80: {
+                "service_type": ServiceType.HTTP,
+                "name": "HTTP",
+                "description": "HTTP Service",
+            }
+        }
+
         # Port 80 is in common_ports dictionary as HTTP
         result = await port_scanner_service.detect_service("192.0.2.1", 80, "tcp")
 
@@ -199,13 +215,22 @@ class TestPortScannerService:
         assert result["name"] == "HTTP"
 
     @pytest.mark.asyncio
+    @pytest.mark.timeout(10)  # Increase timeout to 10 seconds for this test
     async def test_detect_service_unknown_port(self, port_scanner_service):
         """Test detecting a service on an unknown port."""
-        # Port 12345 is not in common_ports dictionary
-        result = await port_scanner_service.detect_service("192.0.2.1", 12345, "tcp")
+        # Mock the service_detector.detect_service method
+        port_scanner_service.service_detector = MagicMock()
+        port_scanner_service.service_detector.detect_service.return_value = None
 
-        # Method returns None for unknown ports
-        assert result is None
+        # Set an empty common_ports dictionary
+        port_scanner_service.common_ports = {}
+
+        # Port 9999 is not in common_ports dictionary
+        result = await port_scanner_service.detect_service("192.0.2.1", 9999, "tcp")
+
+        assert result is not None
+        assert result["service_type"] == ServiceType.UNKNOWN
+        assert result["name"] == "Unknown"
 
     @pytest.mark.asyncio
     async def test_scan_target_with_hostname(

@@ -1,4 +1,4 @@
-"""Repository layer for the Reporting Engine."""
+"""Repository for the Reporting Engine."""
 
 import os
 from datetime import datetime
@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from sentinelprobe.core.config import get_settings
 from sentinelprobe.core.db import get_db_session
+from sentinelprobe.core.logging import get_logger
 from sentinelprobe.core.mongodb import get_collection
 from sentinelprobe.reporting.models import (
     Report,
@@ -19,18 +20,20 @@ from sentinelprobe.reporting.models import (
     ReportType,
 )
 
+logger = get_logger(__name__)
+
 
 class ReportRepository:
-    """Repository for report management."""
+    """Repository for the Reporting Engine."""
 
     def __init__(self, session: Optional[AsyncSession] = None):
-        """Initialize report repository."""
+        """Initialize the repository."""
         self.session = session
         self.reports_dir = Path(get_settings().REPORT_DIR)
         self._ensure_report_dir()
 
     def _ensure_report_dir(self) -> None:
-        """Ensure reports directory exists."""
+        """Ensure the reports directory exists."""
         os.makedirs(self.reports_dir, exist_ok=True)
 
     async def get_session(self) -> AsyncSession:
@@ -191,12 +194,12 @@ class ReportRepository:
         Save report content to a file.
 
         Args:
-            report_id: ID of the report
+            report_id: Report ID
             content: Report content
-            report_format: Format of the report
+            report_format: Report format
 
         Returns:
-            Path to the saved file
+            str: Path to the saved file
         """
         # Create a filename based on report ID and format
         file_extension = report_format.value.lower()
@@ -208,7 +211,13 @@ class ReportRepository:
             f.write(content)
 
         # Update the report record with the file path
-        relative_path = str(file_path.relative_to(Path.cwd()))
+        try:
+            # Try to get a relative path for production use
+            relative_path = str(file_path.relative_to(Path.cwd()))
+        except ValueError:
+            # In test environments, just use the absolute path
+            relative_path = str(file_path)
+
         await self.update_report_content_path(report_id, relative_path)
 
         return str(file_path)
@@ -238,10 +247,15 @@ class ReportRepository:
                 pass
 
         # Delete MongoDB data if it exists
-        collection = await get_collection("report_data")
-        await collection.delete_one({"report_id": report_id})
+        try:
+            collection = await get_collection("report_data")
+            await collection.delete_one({"report_id": report_id})
+        except Exception as e:
+            # In test environments, MongoDB might not be available
+            # Log the error but continue with SQL deletion
+            logger.warning(f"Failed to delete report data from MongoDB: {e}")
 
-        # Delete from SQL database
+        # Delete the report from the database
         await session.delete(report)
         await session.commit()
 

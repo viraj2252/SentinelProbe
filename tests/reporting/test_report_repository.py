@@ -40,7 +40,7 @@ class TestReportRepository:
         assert report.title == "Test Report"
         assert report.description == "Test Description"
         assert report.status == ReportStatus.PENDING
-        assert report.metadata == {"test": "data"}
+        assert report.report_metadata == {"test": "data"}
         assert report.created_at is not None
         assert report.updated_at is not None
         assert report.content_path is None

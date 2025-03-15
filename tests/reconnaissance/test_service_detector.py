@@ -201,7 +201,7 @@ async def test_detect_service_unknown():
 async def test_detect_services_batch():
     """Test detecting multiple services in a batch."""
 
-    async def mock_detect_service(ip, port, protocol=None):
+    async def mock_detect_service(self, ip, port, protocol=None):
         if port == 22:
             return {
                 "service_type": ServiceType.SSH,
@@ -228,10 +228,12 @@ async def test_detect_services_batch():
         detector = ServiceDetector()
         results = await detector.detect_services_batch("127.0.0.1", [22, 80, 8080])
 
-        assert len(results) == 3
-        assert results[22]["service_type"] == ServiceType.SSH
-        assert results[80]["service_type"] == ServiceType.HTTP
-        assert results[8080]["service_type"] == ServiceType.UNKNOWN
+    assert len(results) == 3
+    assert results[22]["service_type"] == ServiceType.SSH
+    assert results[22]["version"] == "OpenSSH_8.2p1"
+    assert results[80]["service_type"] == ServiceType.HTTP
+    assert results[80]["version"] == "nginx/1.18.0"
+    assert results[8080]["service_type"] == ServiceType.UNKNOWN
 
 
 @pytest.mark.asyncio
