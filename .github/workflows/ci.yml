@@ -63,7 +63,8 @@ jobs:
 
       - name: Type check with mypy
         run: |
-          poetry run mypy sentinelprobe
+          poetry run pip install types-requests types-PyYAML
+          poetry run mypy --config-file=pyproject.toml sentinelprobe
 
       - name: Test with pytest and generate coverage report
         env:
