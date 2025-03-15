@@ -54,14 +54,11 @@ jobs:
 
       - name: Lint with flake8
         run: |
-          poetry run flake8 sentinelprobe tests
+          poetry run ./scripts/lint.sh
 
-      - name: Check formatting with black
+      - name: Check formatting
         run: |
           poetry run black --check sentinelprobe tests
-
-      - name: Check imports with isort
-        run: |
           poetry run isort --check sentinelprobe tests
 
       - name: Type check with mypy
