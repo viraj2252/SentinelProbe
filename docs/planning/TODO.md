@@ -350,3 +350,21 @@ We have successfully implemented all the core components needed for our MVP:
 - Document all APIs and interfaces
 - Perform code reviews for all pull requests
 - Update this checklist as implementation progresses
+
+## Integration Tests Added
+
+The following integration tests have been added to ensure the components work together correctly:
+
+1. **AI Decision Workflow Test** - Tests the AI decision engine's ability to assess vulnerabilities and make decisions.
+   - Located at `tests/integration/test_ai_decision_workflow.py`
+   - Status: ✅ Passing
+
+2. **Reconnaissance-Vulnerability Workflow Test** - Tests the end-to-end workflow from reconnaissance to vulnerability scanning.
+   - Located at `tests/integration/test_recon_vuln_workflow.py`
+   - Status: ✅ Passing
+
+3. **End-to-End Workflow Test** - Tests the complete workflow from job creation to report generation.
+   - Located at `tests/integration/test_end_to_end.py`
+   - Status: ⚠️ In progress (currently times out due to complexity)
+
+These tests help ensure that the different components of SentinelProbe work together correctly and that the data flows properly between modules.
