@@ -27,34 +27,63 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install mkdocs==1.4.2 mkdocs-material==9.1.5 pymdown-extensions==9.9.2
-          pip install mkdocs-mermaid2-plugin==0.6.0
           # Install pandoc for HTML to Markdown conversion
           sudo apt-get update
           sudo apt-get install -y pandoc
 
-      - name: Modify MkDocs configuration for wiki build
+      - name: Create minimal MkDocs configuration for wiki build
         run: |
-          # Create a temporary copy of mkdocs.yml for wiki building
-          cp mkdocs.yml mkdocs.wiki.yml
+          # Create a simplified mkdocs.yml file for wiki building
+          cat > mkdocs.wiki.yml << 'EOF'
+          site_name: SentinelProbe Documentation
+          site_description: Documentation for the SentinelProbe AI-powered penetration testing system
+          site_author: SentinelProbe Team
+          repo_url: https://github.com/viraj2252/sentinelprobe
+          repo_name: sentinelprobe
 
-          # Use sed to comment out the mermaid2 plugin if it's causing issues
-          sed -i '/^  - mermaid2:/,/^[a-z]/s/^  - /  #- /' mkdocs.wiki.yml
+          theme:
+            name: material
+            features:
+              - navigation.tabs
+              - search.highlight
 
-          # Comment out non-existent files in the nav to avoid warnings
-          sed -i 's|      - Configuration: wiki/configuration.md|      #- Configuration: wiki/configuration.md|g' mkdocs.wiki.yml
-          sed -i 's|      - Running Your First Scan: wiki/first-scan.md|      #- Running Your First Scan: wiki/first-scan.md|g' mkdocs.wiki.yml
-          sed -i 's|      - Understanding Reports: wiki/understanding-reports.md|      #- Understanding Reports: wiki/understanding-reports.md|g' mkdocs.wiki.yml
-          sed -i 's|      - Managing Jobs: wiki/managing-jobs.md|      #- Managing Jobs: wiki/managing-jobs.md|g' mkdocs.wiki.yml
+          markdown_extensions:
+            - admonition
+            - pymdownx.details
+            - pymdownx.superfences
+            - pymdownx.highlight
+            - pymdownx.inlinehilite
+            - pymdownx.tabbed
+            - pymdownx.tasklist:
+                custom_checkbox: true
+            - def_list
+            - meta
+            - toc:
+                permalink: true
 
-          # Comment out other non-existent files
-          sed -i 's|      - Plugin Development: wiki/advanced/plugin-development.md|      #- Plugin Development: wiki/advanced/plugin-development.md|g' mkdocs.wiki.yml
-          sed -i 's|      - API Reference: wiki/advanced/api-reference.md|      #- API Reference: wiki/advanced/api-reference.md|g' mkdocs.wiki.yml
-          sed -i 's|      - Integration Guide: wiki/advanced/integration.md|      #- Integration Guide: wiki/advanced/integration.md|g' mkdocs.wiki.yml
+          plugins:
+            - search
 
-          sed -i 's|      - Development Setup: wiki/contributing/development-setup.md|      #- Development Setup: wiki/contributing/development-setup.md|g' mkdocs.wiki.yml
-          sed -i 's|      - Coding Standards: wiki/contributing/coding-standards.md|      #- Coding Standards: wiki/contributing/coding-standards.md|g' mkdocs.wiki.yml
-          sed -i 's|      - Testing Guidelines: wiki/contributing/testing.md|      #- Testing Guidelines: wiki/contributing/testing.md|g' mkdocs.wiki.yml
-          sed -i 's|      - Pull Request Process: wiki/contributing/pull-requests.md|      #- Pull Request Process: wiki/contributing/pull-requests.md|g' mkdocs.wiki.yml
+          # Only include documentation files that actually exist
+          nav:
+            - Home: wiki/index.md
+            - Getting Started:
+                - Installation: wiki/installation.md
+                - Quick Start: wiki/quick-start.md
+                - System Requirements: wiki/system-requirements.md
+                - Architecture Overview: wiki/architecture-overview.md
+            - Component Documentation:
+                - Reconnaissance Module: wiki/components/reconnaissance.md
+                - AI Decision Engine: wiki/components/ai-decision-engine.md
+                - Vulnerability Scanner: wiki/components/vulnerability-scanner.md
+                - Exploitation Engine: wiki/components/exploitation-engine.md
+                - Post-Exploitation Module: wiki/components/post-exploitation.md
+                - Reporting Engine: wiki/components/reporting-engine.md
+            - Advanced Usage:
+                - Custom Rule Development: wiki/advanced/custom-rules.md
+
+          docs_dir: docs
+          EOF
 
       - name: Clone Wiki Repository
         run: |
@@ -64,7 +93,7 @@ jobs:
 
       - name: Generate Wiki Content
         run: |
-          # Build documentation with MkDocs using our modified config
+          # Build documentation with MkDocs using our simplified config
           mkdocs build -f mkdocs.wiki.yml
 
           # Create a temporary directory for processed files
