@@ -187,6 +187,38 @@ The project uses GitHub Actions for continuous integration and testing:
 - Test coverage reporting
 - Docker image building and testing
 
+## Documentation
+
+SentinelProbe includes comprehensive documentation in the form of a wiki. The documentation covers all components, installation instructions, usage guides, and more.
+
+### Accessing the Documentation
+
+The documentation is available in multiple formats:
+
+1. **GitHub Wiki**: The documentation is automatically published to the [GitHub Wiki](https://github.com/yourusername/sentinelprobe/wiki)
+2. **Local MkDocs Site**: You can run a local documentation server using `mkdocs serve`
+3. **Source Files**: All documentation is available in the `docs/wiki` directory
+
+### Documentation Structure
+
+The documentation is organized into the following sections:
+
+- **Getting Started**: Installation, requirements, and quick start guides
+- **User Guides**: Detailed guides for using SentinelProbe
+- **Component Documentation**: Details about each module (Reconnaissance, Vulnerability Scanner, etc.)
+- **Advanced Usage**: Custom rule development, API references, and more
+- **Contributing**: Guidelines for contributing to SentinelProbe
+
+### Automatic Wiki Publishing
+
+The documentation is automatically published to the GitHub Wiki whenever changes are made to the `docs/wiki` directory or the `mkdocs.yml` file. This is handled by a GitHub Actions workflow that:
+
+1. Builds the MkDocs site
+2. Converts the HTML output to GitHub Wiki format
+3. Updates the GitHub Wiki repository
+
+No manual intervention is required to keep the documentation updated.
+
 ## License
 
 [MIT License](LICENSE)

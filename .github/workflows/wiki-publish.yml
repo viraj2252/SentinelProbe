@@ -1,0 +1,99 @@
+name: Publish Wiki
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/wiki/**"
+      - "mkdocs.yml"
+
+jobs:
+  publish-wiki:
+    name: Publish Wiki to GitHub
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install mkdocs mkdocs-material pymdown-extensions
+          # Install pandoc for HTML to Markdown conversion
+          sudo apt-get update
+          sudo apt-get install -y pandoc
+
+      - name: Clone Wiki Repository
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git clone "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.wiki.git" wiki
+
+      - name: Generate Wiki Content
+        run: |
+          # Build documentation with MkDocs
+          mkdocs build
+
+          # Create a temporary directory for processed files
+          mkdir -p temp_wiki
+
+          # Process the site output files for wiki format
+          for file in $(find site -name "*.html" -type f); do
+            # Get the relative path and filename
+            rel_path=${file#site/}
+            dir_path=$(dirname "$rel_path")
+            base_name=$(basename "$rel_path" .html)
+
+            # Skip index files - they'll become Home.md
+            if [[ "$base_name" == "index" ]]; then
+              if [[ "$dir_path" == "." ]]; then
+                # Root index becomes Home.md
+                pandoc -f html -t markdown_github "$file" -o "temp_wiki/Home.md"
+              else
+                # Other index files become directory name.md
+                dir_name=$(basename "$dir_path")
+                pandoc -f html -t markdown_github "$file" -o "temp_wiki/${dir_name}.md"
+              fi
+            else
+              # Normal files keep their name
+              target_path="temp_wiki/${base_name}.md"
+              pandoc -f html -t markdown_github "$file" -o "$target_path"
+
+              # Fix internal links
+              sed -i 's/\.html)/)/g' "$target_path"
+              sed -i 's/\.html#/#/g' "$target_path"
+            fi
+          done
+
+          # Copy any images
+          mkdir -p temp_wiki/assets
+          if [ -d "site/assets" ]; then
+            cp -r site/assets/* temp_wiki/assets/
+          fi
+
+      - name: Update Wiki Repository
+        run: |
+          # Remove old files
+          rm -rf wiki/*.md
+          mkdir -p wiki/assets
+
+          # Copy new files
+          cp temp_wiki/*.md wiki/
+          cp -r temp_wiki/assets/* wiki/assets/ 2>/dev/null || true
+
+          # Go to wiki repo
+          cd wiki
+
+          # Add all changes
+          git add .
+
+          # Commit if there are changes
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update wiki from docs - ${GITHUB_SHA}" && git push)
