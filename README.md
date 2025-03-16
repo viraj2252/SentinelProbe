@@ -43,7 +43,7 @@ The system consists of the following core components:
 1. Clone the repository:
 
    ```
-   git clone https://github.com/yourusername/sentinelprobe.git
+   git clone https://github.com/viraj2252/sentinelprobe.git
    cd sentinelprobe
    ```
 
