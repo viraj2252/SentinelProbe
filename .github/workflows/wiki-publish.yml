@@ -26,10 +26,35 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install mkdocs mkdocs-material pymdown-extensions mkdocs-mermaid2-plugin
+          pip install mkdocs==1.4.2 mkdocs-material==9.1.5 pymdown-extensions==9.9.2
+          pip install mkdocs-mermaid2-plugin==0.6.0
           # Install pandoc for HTML to Markdown conversion
           sudo apt-get update
           sudo apt-get install -y pandoc
+
+      - name: Modify MkDocs configuration for wiki build
+        run: |
+          # Create a temporary copy of mkdocs.yml for wiki building
+          cp mkdocs.yml mkdocs.wiki.yml
+
+          # Use sed to comment out the mermaid2 plugin if it's causing issues
+          sed -i '/^  - mermaid2:/,/^[a-z]/s/^  - /  #- /' mkdocs.wiki.yml
+
+          # Comment out non-existent files in the nav to avoid warnings
+          sed -i 's|      - Configuration: wiki/configuration.md|      #- Configuration: wiki/configuration.md|g' mkdocs.wiki.yml
+          sed -i 's|      - Running Your First Scan: wiki/first-scan.md|      #- Running Your First Scan: wiki/first-scan.md|g' mkdocs.wiki.yml
+          sed -i 's|      - Understanding Reports: wiki/understanding-reports.md|      #- Understanding Reports: wiki/understanding-reports.md|g' mkdocs.wiki.yml
+          sed -i 's|      - Managing Jobs: wiki/managing-jobs.md|      #- Managing Jobs: wiki/managing-jobs.md|g' mkdocs.wiki.yml
+
+          # Comment out other non-existent files
+          sed -i 's|      - Plugin Development: wiki/advanced/plugin-development.md|      #- Plugin Development: wiki/advanced/plugin-development.md|g' mkdocs.wiki.yml
+          sed -i 's|      - API Reference: wiki/advanced/api-reference.md|      #- API Reference: wiki/advanced/api-reference.md|g' mkdocs.wiki.yml
+          sed -i 's|      - Integration Guide: wiki/advanced/integration.md|      #- Integration Guide: wiki/advanced/integration.md|g' mkdocs.wiki.yml
+
+          sed -i 's|      - Development Setup: wiki/contributing/development-setup.md|      #- Development Setup: wiki/contributing/development-setup.md|g' mkdocs.wiki.yml
+          sed -i 's|      - Coding Standards: wiki/contributing/coding-standards.md|      #- Coding Standards: wiki/contributing/coding-standards.md|g' mkdocs.wiki.yml
+          sed -i 's|      - Testing Guidelines: wiki/contributing/testing.md|      #- Testing Guidelines: wiki/contributing/testing.md|g' mkdocs.wiki.yml
+          sed -i 's|      - Pull Request Process: wiki/contributing/pull-requests.md|      #- Pull Request Process: wiki/contributing/pull-requests.md|g' mkdocs.wiki.yml
 
       - name: Clone Wiki Repository
         run: |
@@ -39,8 +64,8 @@ jobs:
 
       - name: Generate Wiki Content
         run: |
-          # Build documentation with MkDocs
-          mkdocs build
+          # Build documentation with MkDocs using our modified config
+          mkdocs build -f mkdocs.wiki.yml
 
           # Create a temporary directory for processed files
           mkdir -p temp_wiki
