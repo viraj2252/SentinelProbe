@@ -5,6 +5,8 @@ from fastapi import APIRouter
 from sentinelprobe.ai_decision.api import router as ai_decision_router
 from sentinelprobe.core.config import get_settings
 from sentinelprobe.exploitation.api import router as exploitation_router
+from sentinelprobe.orchestration.api import router as orchestration_router
+from sentinelprobe.reconnaissance.api import router as reconnaissance_router
 from sentinelprobe.reporting.api import router as reports_router
 from sentinelprobe.vulnerability_scanner.api import router as vulnerability_router
 from sentinelprobe.vulnerability_scanner.attack_pattern_api import (
@@ -22,6 +24,8 @@ api_router.include_router(vulnerability_router)
 api_router.include_router(attack_pattern_router)
 api_router.include_router(ai_decision_router)
 api_router.include_router(exploitation_router)
+api_router.include_router(reconnaissance_router)
+api_router.include_router(orchestration_router)
 
 # Add more routers as they are implemented
 # api_router.include_router(reconnaissance_router)

@@ -154,9 +154,12 @@ class JobResponse(BaseModel):
     job_type: JobType
     status: JobStatus
     target: str
-    config: Dict[str, Any]
+    config: Optional[Dict[str, Any]]
     created_at: datetime
     updated_at: datetime
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    tasks: List = []
 
 
 class TaskCreate(BaseModel):

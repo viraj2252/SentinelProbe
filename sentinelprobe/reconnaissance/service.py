@@ -85,6 +85,16 @@ class ReconnaissanceService:
         targets = await self.target_repository.get_targets_by_job(job_id)
         return [self._target_to_response(target) for target in targets]
 
+    async def get_all_targets(self) -> List[TargetResponse]:
+        """
+        Get all targets.
+
+        Returns:
+            List[TargetResponse]: List of all targets
+        """
+        targets = await self.target_repository.get_all_targets()
+        return [self._target_to_response(target) for target in targets]
+
     async def update_target(
         self, target_id: int, target_data: TargetUpdate
     ) -> Optional[TargetResponse]:

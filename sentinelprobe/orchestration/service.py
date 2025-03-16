@@ -1,6 +1,5 @@
 """Service for the Orchestration Engine."""
 
-import json
 from typing import List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -56,7 +55,7 @@ class OrchestrationService:
             job_type=job_data.job_type,
             target=job_data.target,
             description=job_data.description,
-            config=job_data.config,
+            config=dict(job_data.config) if job_data.config else {},
         )
         return self._job_to_response(job)
 
@@ -259,7 +258,6 @@ class OrchestrationService:
         Returns:
             JobResponse: Job response.
         """
-        config = json.loads(job.config) if job.config else None
         return JobResponse(
             id=job.id,
             name=job.name,
@@ -269,10 +267,7 @@ class OrchestrationService:
             target=job.target,
             created_at=job.created_at,
             updated_at=job.updated_at,
-            started_at=job.started_at,
-            completed_at=job.completed_at,
-            config=config,
-            tasks=[],  # Tasks are loaded separately when needed
+            config=job.config,
         )
 
     def _task_to_response(self, task: Task) -> TaskResponse:

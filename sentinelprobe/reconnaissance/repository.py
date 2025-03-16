@@ -85,6 +85,17 @@ class TargetRepository:
         result = await self.session.execute(query)
         return list(result.scalars().all())
 
+    async def get_all_targets(self) -> List[Target]:
+        """
+        Get all targets.
+
+        Returns:
+            List[Target]: List of all targets
+        """
+        query = select(Target)
+        result = await self.session.execute(query)
+        return list(result.scalars().all())
+
     async def update_target(
         self,
         target_id: int,
