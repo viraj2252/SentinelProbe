@@ -1,63 +1,58 @@
-# SentinelProbe Documentation
+# 🛡️ SentinelProbe Documentation
 
-Welcome to the SentinelProbe wiki! This documentation will guide you through understanding, setting up, configuring, and using SentinelProbe - an AI-powered penetration testing system.
+![SentinelProbe](assets/images/logo.png)
 
-## What is SentinelProbe?
+[![Status: Active Development](https://img.shields.io/badge/Status-Active%20Development-brightgreen)](https://github.com/viraj2252/SentinelProbe)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/viraj2252/SentinelProbe/blob/main/LICENSE)
 
-SentinelProbe is an advanced AI-driven penetration testing solution designed to autonomously identify, exploit, and document security vulnerabilities in target systems. By leveraging machine learning and adaptive decision-making, the system emulates the capabilities of skilled human penetration testers while providing increased efficiency, consistency, and comprehensive reporting.
+> *An AI-powered open-source penetration testing tool designed to proactively identify, analyze, and mitigate security vulnerabilities efficiently.*
 
-## Documentation Sections
+## 📚 About This Documentation
 
-### Getting Started
+This wiki provides comprehensive documentation for SentinelProbe, covering all aspects from installation to advanced usage. Browse the pages using the sidebar or follow the quick links below.
 
-- [Installation Guide](installation.md)
-- [Quick Start Tutorial](quick-start.md)
-- [System Requirements](system-requirements.md)
-- [Architecture Overview](architecture-overview.md)
+## 🔍 Core Components
 
-### User Guides
+SentinelProbe consists of several key components that work together to deliver a comprehensive security assessment:
 
-- [Configuration Guide](configuration.md)
-- [Running Your First Scan](first-scan.md)
-- [Understanding Reports](understanding-reports.md)
-- [Managing Jobs](managing-jobs.md)
+| Component | Description |
+|-----------|-------------|
+| [🔬 Reconnaissance Module](reconnaissance) | Discovers and maps target systems and services |
+| [🧠 AI Decision Engine](ai-decision-engine) | Drives intelligent testing strategies based on findings |
+| [🔎 Vulnerability Scanner](vulnerability-scanner) | Identifies potential security weaknesses |
+| [🔨 Exploitation Engine](exploitation-engine) | Validates vulnerabilities through controlled exploitation |
+| [🔄 Post-Exploitation Module](post-exploitation) | Simulates lateral movement and privilege escalation |
+| [📊 Reporting Engine](reporting-engine) | Generates comprehensive security reports |
 
-### Component Documentation
+## 🚀 Getting Started
 
-- [Reconnaissance Module](components/reconnaissance.md)
-- [AI Decision Engine](components/ai-decision-engine.md)
-- [Vulnerability Scanner](components/vulnerability-scanner.md)
-- [Exploitation Engine](components/exploitation-engine.md)
-- [Post-Exploitation Module](components/post-exploitation.md)
-- [Reporting Engine](components/reporting-engine.md)
+New to SentinelProbe? Start here:
 
-### Advanced Usage
+1. [📥 Installation Guide](installation) - Set up SentinelProbe in your environment
+2. [⚙️ System Requirements](system-requirements) - Hardware and software prerequisites
+3. [🏗️ Architecture Overview](architecture-overview) - Understand how SentinelProbe works
+4. [▶️ Quick Start Tutorial](quick-start) - Run your first security assessment
 
-- [Custom Rule Development](advanced/custom-rules.md)
-- [Plugin Development](advanced/plugin-development.md)
-- [API Reference](advanced/api-reference.md)
-- [Integration Guide](advanced/integration.md)
+## 📋 Key Features
 
-### Contributing
+- **AI-Driven Decision Making**: Intelligent testing strategy optimization
+- **Comprehensive Testing**: From reconnaissance to exploitation and reporting
+- **Extensible Design**: Plugin architecture for custom vulnerability tests
+- **Safe Testing**: Controlled exploitation with minimal target impact
+- **Detailed Reporting**: Actionable findings with remediation guidance
 
-- [Development Setup](contributing/development-setup.md)
-- [Coding Standards](contributing/coding-standards.md)
-- [Testing Guidelines](contributing/testing.md)
-- [Pull Request Process](contributing/pull-requests.md)
+## 🔒 Security Notice
 
-## Recent Updates
+SentinelProbe is a powerful security testing tool. Always ensure you have proper authorization before testing any system or network. Use responsibly and ethically.
 
-We've added this new section to test our automatic wiki publishing workflow. Here are some recent updates to SentinelProbe:
+## 🤝 Contributing
 
-- Added comprehensive documentation for all core components
-- Implemented system requirements documentation
-- Set up automatic wiki publishing to GitHub
-- Improved code quality through enhanced testing
+We welcome contributions to both the codebase and this documentation. See our [contributing guidelines](https://github.com/viraj2252/SentinelProbe/blob/main/CONTRIBUTING.md) to get started.
 
-## Project Status
+## 📜 License
 
-SentinelProbe is currently in active development. See our [TODO list](../planning/TODO.md) for current development status and upcoming features.
+SentinelProbe is licensed under the MIT License. See the [LICENSE](https://github.com/viraj2252/SentinelProbe/blob/main/LICENSE) file for details.
 
-## License
+---
 
-SentinelProbe is licensed under the MIT License. See the [LICENSE](../../LICENSE) file for details.
+*Last Updated: March 2024*
