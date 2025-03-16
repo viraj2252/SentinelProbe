@@ -258,6 +258,18 @@ class OrchestrationService:
         Returns:
             JobResponse: Job response.
         """
+        # Ensure config is properly handled
+        config = job.config
+        if isinstance(config, str):
+            import json
+
+            try:
+                config = json.loads(config)
+            except json.JSONDecodeError:
+                config = {}
+        elif not isinstance(config, dict):
+            config = {}
+
         return JobResponse(
             id=job.id,
             name=job.name,
@@ -267,7 +279,7 @@ class OrchestrationService:
             target=job.target,
             created_at=job.created_at,
             updated_at=job.updated_at,
-            config=job.config,
+            config=config,
         )
 
     def _task_to_response(self, task: Task) -> TaskResponse:

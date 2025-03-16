@@ -232,7 +232,6 @@ async def test_run_migration():
         assert "task" in result
 
 
-@pytest.mark.skip(reason="Task model missing updated_at column")
 @pytest.mark.timeout(5)
 @pytest.mark.asyncio
 async def test_table_columns():
