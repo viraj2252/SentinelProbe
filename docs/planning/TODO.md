@@ -302,6 +302,7 @@ This document outlines the implementation and testing tasks for the SentinelProb
 - [x] Ensure all MongoDB tests properly await async functions
 - [x] Fix metadata field naming to use target_metadata and service_metadata for proper type resolution
 - [x] Fix mypy errors in scanner.py by adding checks for None IP addresses
+- [ ] Fix job status synchronization between reconnaissance module and orchestration engine - Currently jobs remain in "pending" status even when reconnaissance tasks are completed
 
 ### Recently Completed Fixes
 
