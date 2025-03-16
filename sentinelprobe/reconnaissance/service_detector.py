@@ -82,7 +82,10 @@ VERSION_PATTERNS = {
 # Protocol probes
 # Format: service_type: (probe_data, timeout)
 PROTOCOL_PROBES = {
-    ServiceType.HTTP: (b"GET / HTTP/1.0\r\n\r\n", 3.0),
+    ServiceType.HTTP: (
+        b"GET / HTTP/1.1\r\nHost: localhost\r\nAccept: */*\r\nUser-Agent: SentinelProbe\r\n\r\n",
+        3.0,
+    ),
     ServiceType.HTTPS: (b"", 3.0),  # Just connect for HTTPS
     ServiceType.FTP: (b"", 3.0),  # Just connect for FTP
     ServiceType.SSH: (b"", 3.0),  # Just connect for SSH
@@ -94,7 +97,10 @@ PROTOCOL_PROBES = {
     ServiceType.REDIS: (b"PING\r\n", 3.0),
     ServiceType.POSTGRESQL: (b"", 3.0),  # Just connect for PostgreSQL
     ServiceType.MONGODB: (b"", 3.0),  # Just connect for MongoDB
-    ServiceType.ELASTICSEARCH: (b"GET / HTTP/1.0\r\n\r\n", 3.0),
+    ServiceType.ELASTICSEARCH: (
+        b"GET / HTTP/1.1\r\nHost: localhost\r\nAccept: */*\r\nUser-Agent: SentinelProbe\r\n\r\n",
+        3.0,
+    ),
     ServiceType.DNS: (
         # DNS query for www.example.com
         b"\x00\x00\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00"

@@ -132,19 +132,33 @@ class ReconnaissanceService:
         return await self.target_repository.delete_target(target_id)
 
     async def scan_target(
-        self, target_id: int, ports: Optional[List[int]] = None
+        self,
+        target_id: int,
+        ports: Optional[List[int]] = None,
+        port_range: Optional[tuple[int, int]] = None,
+        scan_rate: Optional[float] = None,
+        aggressive_mode: Optional[bool] = None,
     ) -> Optional[TargetResponse]:
         """
         Scan a target for open ports.
 
         Args:
             target_id: Target ID
-            ports: Optional list of ports to scan
+            ports: Optional list of specific ports to scan
+            port_range: Optional tuple (start_port, end_port) to scan a range of ports
+            scan_rate: Optional scan rate (ports per second)
+            aggressive_mode: Optional flag to enable aggressive scanning
 
         Returns:
             TargetResponse: Updated target with scan results or None if target not found
         """
-        target = await self.scanner_service.scan_target(target_id, ports)
+        target = await self.scanner_service.scan_target(
+            target_id=target_id,
+            ports=ports,
+            port_range=port_range,
+            scan_rate=scan_rate,
+            aggressive_mode=aggressive_mode,
+        )
         if not target:
             return None
         return self._target_to_response(target)

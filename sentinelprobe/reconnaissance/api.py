@@ -130,6 +130,14 @@ async def get_target(
 async def scan_target(
     target_id: int = Path(..., description="Target ID"),
     ports: Optional[List[int]] = Query(None, description="Specific ports to scan"),
+    start_port: Optional[int] = Query(None, description="Start of port range to scan"),
+    end_port: Optional[int] = Query(None, description="End of port range to scan"),
+    scan_rate: Optional[float] = Query(
+        None, description="Scan rate (ports per second)"
+    ),
+    aggressive_mode: Optional[bool] = Query(
+        None, description="Use aggressive scanning mode"
+    ),
     session: AsyncSession = Depends(get_db_session),
 ) -> TargetResponse:
     """
@@ -138,6 +146,10 @@ async def scan_target(
     Args:
         target_id: Target ID
         ports: Optional list of specific ports to scan
+        start_port: Optional start of port range to scan
+        end_port: Optional end of port range to scan
+        scan_rate: Optional scan rate (ports per second)
+        aggressive_mode: Optional flag to enable aggressive scanning
         session: Database session
 
     Returns:
@@ -145,7 +157,25 @@ async def scan_target(
     """
     service = ReconnaissanceService(session)
     try:
-        target = await service.scan_target(target_id, ports)
+        # Determine if we're using a port range
+        port_range = None
+        if start_port is not None and end_port is not None:
+            if start_port > end_port:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Start port must be less than or equal to end port",
+                )
+            port_range = (start_port, end_port)
+
+        # Execute the scan
+        target = await service.scan_target(
+            target_id=target_id,
+            ports=ports,
+            port_range=port_range,
+            scan_rate=scan_rate,
+            aggressive_mode=aggressive_mode,
+        )
+
         if not target:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -259,4 +289,107 @@ async def create_service(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error creating service: {str(e)}",
+        )
+
+
+@router.post(
+    "/targets/{target_id}/full-scan",
+    response_model=TargetResponse,
+    summary="Full Port Scan",
+)
+async def full_scan_target(
+    target_id: int = Path(..., description="Target ID"),
+    scan_type: str = Query(
+        "common", description="Scan type: 'common', 'web', 'db', 'full', 'custom'"
+    ),
+    custom_start: Optional[int] = Query(
+        None, description="Start port for custom range"
+    ),
+    custom_end: Optional[int] = Query(None, description="End port for custom range"),
+    scan_rate: Optional[float] = Query(0.5, description="Scan rate (ports per second)"),
+    aggressive_mode: Optional[bool] = Query(
+        False, description="Use aggressive scanning"
+    ),
+    session: AsyncSession = Depends(get_db_session),
+) -> TargetResponse:
+    """
+    Perform a comprehensive port scan using predefined ranges.
+
+    Args:
+        target_id: Target ID
+        scan_type: Type of scan to perform:
+          - common: Scan common ports (default)
+          - web: Scan common web application ports
+          - db: Scan database ports
+          - full: Scan all TCP ports (1-65535)
+          - custom: Scan a custom range (requires custom_start and custom_end)
+        custom_start: Start port for custom range
+        custom_end: End port for custom range
+        scan_rate: Scan rate in ports per second
+        aggressive_mode: Use aggressive scanning mode
+        session: Database session
+
+    Returns:
+        Updated target with scan results
+    """
+    service = ReconnaissanceService(session)
+
+    try:
+        # Define port ranges based on scan type
+        port_range = None
+        ports = None
+
+        if scan_type == "common":
+            # Use the default common ports
+            pass
+        elif scan_type == "web":
+            # Common web application ports
+            ports = [80, 443, 3000, 3001, 4200, 5000, 8000, 8080, 8443, 8888, 9000]
+        elif scan_type == "db":
+            # Common database ports
+            ports = [1433, 1521, 3306, 5432, 6379, 9200, 27017, 27018, 27019, 28017]
+        elif scan_type == "full":
+            # Scan all ports (use cautiously)
+            port_range = (1, 65535)
+        elif scan_type == "custom":
+            # Custom port range
+            if custom_start is None or custom_end is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Custom scan requires both custom_start and custom_end parameters",
+                )
+            if custom_start > custom_end:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Start port must be less than or equal to end port",
+                )
+            port_range = (custom_start, custom_end)
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid scan_type: {scan_type}",
+            )
+
+        # Execute the scan
+        target = await service.scan_target(
+            target_id=target_id,
+            ports=ports,
+            port_range=port_range,
+            scan_rate=scan_rate,
+            aggressive_mode=aggressive_mode,
+        )
+
+        if not target:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Target with ID {target_id} not found",
+            )
+        return target
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error scanning target: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error scanning target: {str(e)}",
         )

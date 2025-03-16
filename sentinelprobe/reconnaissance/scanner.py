@@ -98,6 +98,28 @@ class PortScannerService:
             1433: {"service_type": ServiceType.MSSQL, "name": "MS-SQL"},
             1521: {"service_type": ServiceType.ORACLE, "name": "Oracle"},
             1723: {"service_type": ServiceType.PPTP, "name": "PPTP"},
+            # Common web application ports
+            3000: {
+                "service_type": ServiceType.HTTP,
+                "name": "HTTP Web App",
+            },  # Node.js/React apps, Juice Shop
+            3001: {
+                "service_type": ServiceType.HTTP,
+                "name": "HTTP Web App Alt",
+            },  # Alt for Node.js apps
+            4200: {
+                "service_type": ServiceType.HTTP,
+                "name": "HTTP Angular",
+            },  # Angular dev server
+            5000: {
+                "service_type": ServiceType.HTTP,
+                "name": "HTTP Flask/Django",
+            },  # Python web frameworks
+            8000: {
+                "service_type": ServiceType.HTTP,
+                "name": "HTTP Django/FastAPI",
+            },  # Django/FastAPI default
+            # Database ports
             3306: {"service_type": ServiceType.MYSQL, "name": "MySQL"},
             3389: {"service_type": ServiceType.RDP, "name": "RDP"},
             5432: {"service_type": ServiceType.POSTGRESQL, "name": "PostgreSQL"},
@@ -255,16 +277,18 @@ class PortScannerService:
         jitter: Optional[float] = None,
         max_concurrent_scans: Optional[int] = None,
         aggressive_mode: Optional[bool] = None,
+        port_range: Optional[Tuple[int, int]] = None,
     ) -> Optional[Target]:
         """Scan a target for open ports.
 
         Args:
             target_id: The ID of the target to scan.
-            ports: The ports to scan. If None, scan common ports.
+            ports: The ports to scan. If None, scan common ports or use port_range.
             scan_rate: Override the default scan rate (ports per second).
             jitter: Override the default jitter value.
             max_concurrent_scans: Override the max concurrent scans.
             aggressive_mode: Override the aggressive mode setting.
+            port_range: Tuple of (start_port, end_port) to scan a range of ports.
 
         Returns:
             The updated target object, or None if the target was not found.
@@ -338,7 +362,24 @@ class PortScannerService:
                 return None
 
         # Determine which ports to scan
-        ports_to_scan = ports or list(self.common_ports.keys())
+        if port_range:
+            # Generate ports list from range
+            start_port, end_port = port_range
+            ports_to_scan = list(range(max(1, start_port), min(65536, end_port + 1)))
+            logger.info(f"Scanning port range {start_port}-{end_port}")
+            target_metadata["scan_type"] = "port_range"
+            target_metadata["port_range"] = f"{start_port}-{end_port}"
+        elif ports:
+            # Use specified ports
+            ports_to_scan = ports
+            logger.info(f"Scanning specified ports: {ports}")
+            target_metadata["scan_type"] = "specified_ports"
+        else:
+            # Use default common ports
+            ports_to_scan = list(self.common_ports.keys())
+            logger.info("Scanning common ports")
+            target_metadata["scan_type"] = "common_ports"
+
         total_ports = len(ports_to_scan)
 
         # Update target with total ports to scan
