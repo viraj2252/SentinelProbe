@@ -181,7 +181,7 @@ class TestTaskStateTransitions:
 
 
 class TestStatePersistence:
-    """Tests for state persistence and recovery."""
+    """Tests for state persistence in the orchestration engine."""
 
     @pytest.mark.asyncio
     async def test_job_state_persistence(self, job_repository, test_job):
@@ -295,3 +295,188 @@ class TestStatePersistence:
         task_statuses = {task.name: task.status for task in tasks}
         assert task_statuses["Task 1"] == TaskStatus.COMPLETED
         assert task_statuses["Task 2"] == TaskStatus.FAILED
+
+
+@pytest.mark.asyncio
+class TestJobStatusSynchronization:
+    """Tests for job status synchronization based on task statuses."""
+
+    async def test_update_job_status_based_on_tasks(self, mock_session):
+        """Test that job status is updated correctly based on task statuses."""
+        # Arrange
+        job_repo = MockJobRepository(mock_session)
+        task_repo = MockTaskRepository(mock_session)
+        orchestration_service = OrchestrationService(mock_session)
+
+        # Mock the repositories in the service
+        orchestration_service.job_repository = job_repo
+        orchestration_service.task_repository = task_repo
+
+        # Create a job
+        job = await job_repo.create_job(
+            name="Job Status Sync Test",
+            job_type=JobType.SCAN,
+            target="sync-test.example.com",
+        )
+
+        # Create tasks with different statuses
+        task1 = await task_repo.create_task(
+            job_id=job.id,
+            name="Task 1",
+            description="First task",
+        )
+
+        task2 = await task_repo.create_task(
+            job_id=job.id,
+            name="Task 2",
+            description="Second task",
+        )
+
+        task3 = await task_repo.create_task(
+            job_id=job.id,
+            name="Task 3",
+            description="Third task",
+        )
+
+        # Act & Assert - All tasks pending, job should remain pending
+        updated_job = await orchestration_service.update_job_status_based_on_tasks(
+            job.id
+        )
+        assert updated_job.status == JobStatus.PENDING
+
+        # Update one task to running
+        await task_repo.update_task(
+            task_id=task1.id,
+            status=TaskStatus.RUNNING,
+        )
+
+        # Job should now be running
+        updated_job = await orchestration_service.update_job_status_based_on_tasks(
+            job.id
+        )
+        assert updated_job.status == JobStatus.RUNNING
+
+        # Complete all tasks
+        await task_repo.update_task(
+            task_id=task1.id,
+            status=TaskStatus.COMPLETED,
+        )
+        await task_repo.update_task(
+            task_id=task2.id,
+            status=TaskStatus.COMPLETED,
+        )
+        await task_repo.update_task(
+            task_id=task3.id,
+            status=TaskStatus.COMPLETED,
+        )
+
+        # Job should now be completed
+        updated_job = await orchestration_service.update_job_status_based_on_tasks(
+            job.id
+        )
+        assert updated_job.status == JobStatus.COMPLETED
+
+        # Test with a failed task
+        await task_repo.update_task(
+            task_id=task2.id,
+            status=TaskStatus.FAILED,
+        )
+
+        # Job should now be failed
+        updated_job = await orchestration_service.update_job_status_based_on_tasks(
+            job.id
+        )
+        assert updated_job.status == JobStatus.FAILED
+
+        # Test with all tasks cancelled
+        await task_repo.update_task(
+            task_id=task1.id,
+            status=TaskStatus.CANCELLED,
+        )
+        await task_repo.update_task(
+            task_id=task2.id,
+            status=TaskStatus.CANCELLED,
+        )
+        await task_repo.update_task(
+            task_id=task3.id,
+            status=TaskStatus.CANCELLED,
+        )
+
+        # Job should now be cancelled
+        updated_job = await orchestration_service.update_job_status_based_on_tasks(
+            job.id
+        )
+        assert updated_job.status == JobStatus.CANCELLED
+
+    async def test_job_status_sync_with_mixed_task_statuses(self, mock_session):
+        """Test job status synchronization with mixed task statuses."""
+        # Arrange
+        job_repo = MockJobRepository(mock_session)
+        task_repo = MockTaskRepository(mock_session)
+        orchestration_service = OrchestrationService(mock_session)
+
+        # Mock the repositories in the service
+        orchestration_service.job_repository = job_repo
+        orchestration_service.task_repository = task_repo
+
+        # Create a job
+        job = await job_repo.create_job(
+            name="Mixed Status Test",
+            job_type=JobType.SCAN,
+            target="mixed-status.example.com",
+        )
+
+        # Create tasks with different statuses
+        task1 = await task_repo.create_task(
+            job_id=job.id,
+            name="Task 1",
+            description="First task",
+        )
+
+        task2 = await task_repo.create_task(
+            job_id=job.id,
+            name="Task 2",
+            description="Second task",
+        )
+
+        task3 = await task_repo.create_task(
+            job_id=job.id,
+            name="Task 3",
+            description="Third task",
+        )
+
+        # Set mixed statuses
+        await task_repo.update_task(
+            task_id=task1.id,
+            status=TaskStatus.COMPLETED,
+        )
+        await task_repo.update_task(
+            task_id=task2.id,
+            status=TaskStatus.RUNNING,
+        )
+        await task_repo.update_task(
+            task_id=task3.id,
+            status=TaskStatus.PENDING,
+        )
+
+        # Job should be running (running tasks take precedence over pending)
+        updated_job = await orchestration_service.update_job_status_based_on_tasks(
+            job.id
+        )
+        assert updated_job.status == JobStatus.RUNNING
+
+        # Change to completed and failed mix
+        await task_repo.update_task(
+            task_id=task2.id,
+            status=TaskStatus.COMPLETED,
+        )
+        await task_repo.update_task(
+            task_id=task3.id,
+            status=TaskStatus.FAILED,
+        )
+
+        # Job should be failed (failed tasks take highest precedence)
+        updated_job = await orchestration_service.update_job_status_based_on_tasks(
+            job.id
+        )
+        assert updated_job.status == JobStatus.FAILED

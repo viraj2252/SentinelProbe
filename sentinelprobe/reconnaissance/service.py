@@ -4,6 +4,8 @@ from typing import List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from sentinelprobe.core.logging import get_logger
+from sentinelprobe.orchestration.service import OrchestrationService
 from sentinelprobe.reconnaissance.models import (
     Port,
     PortCreate,
@@ -16,6 +18,7 @@ from sentinelprobe.reconnaissance.models import (
     Target,
     TargetCreate,
     TargetResponse,
+    TargetStatus,
     TargetUpdate,
 )
 from sentinelprobe.reconnaissance.repository import (
@@ -24,6 +27,8 @@ from sentinelprobe.reconnaissance.repository import (
     TargetRepository,
 )
 from sentinelprobe.reconnaissance.scanner import PortScannerService
+
+logger = get_logger(__name__)
 
 
 class ReconnaissanceService:
@@ -36,8 +41,11 @@ class ReconnaissanceService:
         self.port_repository = PortRepository(session)
         self.service_repository = ServiceRepository(session)
         self.scanner_service = PortScannerService(
-            self.target_repository, self.port_repository, self.service_repository
+            target_repository=self.target_repository,
+            port_repository=self.port_repository,
+            service_repository=self.service_repository,
         )
+        self.orchestration_service = OrchestrationService(session)
 
     async def create_target(self, target_data: TargetCreate) -> TargetResponse:
         """
@@ -161,6 +169,26 @@ class ReconnaissanceService:
         )
         if not target:
             return None
+
+        # If the target scan is completed, update the job status
+        if target.status == TargetStatus.COMPLETED:
+            logger.info(f"Target scan {target_id} completed, updating job status")
+            # Get all targets for this job to check if all are completed
+            all_job_targets = await self.target_repository.get_targets_by_job(
+                target.job_id
+            )
+            all_completed = all(
+                t.status == TargetStatus.COMPLETED for t in all_job_targets
+            )
+
+            if all_completed:
+                logger.info(
+                    f"All targets for job {target.job_id} are completed, updating job status"
+                )
+                await self.orchestration_service.update_job_status_based_on_tasks(
+                    target.job_id
+                )
+
         return self._target_to_response(target)
 
     async def create_port(self, port_data: PortCreate) -> PortResponse:

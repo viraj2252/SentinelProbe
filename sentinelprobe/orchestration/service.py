@@ -249,6 +249,86 @@ class OrchestrationService:
 
         return self._job_to_response(job)
 
+    async def update_job_status_based_on_tasks(
+        self, job_id: int
+    ) -> Optional[JobResponse]:
+        """Update job status based on the status of its tasks.
+
+        This method checks all tasks for a job and updates the job status accordingly:
+        - If all tasks are completed, the job status is set to COMPLETED
+        - If any task is failed, the job status is set to FAILED
+        - If any task is running, the job status is set to RUNNING
+        - If all tasks are cancelled, the job status is set to CANCELLED
+        - Otherwise, the job status remains PENDING
+
+        Args:
+            job_id: Job ID.
+
+        Returns:
+            Optional[JobResponse]: Updated job or None.
+        """
+        job = await self.job_repository.get_job(job_id)
+        if not job:
+            logger.warning(
+                f"Job {job_id} not found when updating status based on tasks"
+            )
+            return None
+
+        tasks = await self.task_repository.get_tasks_by_job(job_id)
+        if not tasks:
+            logger.info(f"No tasks found for job {job_id}, status remains {job.status}")
+            return self._job_to_response(job)
+
+        # Count tasks by status
+        task_status_counts = {
+            TaskStatus.PENDING: 0,
+            TaskStatus.RUNNING: 0,
+            TaskStatus.COMPLETED: 0,
+            TaskStatus.FAILED: 0,
+            TaskStatus.CANCELLED: 0,
+        }
+
+        for task in tasks:
+            task_status_counts[task.status] = task_status_counts.get(task.status, 0) + 1
+
+        logger.info(f"Task status counts for job {job_id}: {task_status_counts}")
+
+        # Determine new job status based on task statuses
+        new_status = None
+
+        if task_status_counts[TaskStatus.FAILED] > 0:
+            new_status = JobStatus.FAILED
+            logger.info(f"Setting job {job_id} status to FAILED due to failed tasks")
+        elif task_status_counts[TaskStatus.RUNNING] > 0:
+            new_status = JobStatus.RUNNING
+            logger.info(f"Setting job {job_id} status to RUNNING due to running tasks")
+        elif task_status_counts[TaskStatus.PENDING] > 0:
+            new_status = JobStatus.PENDING
+            logger.info(f"Job {job_id} status remains PENDING due to pending tasks")
+        elif task_status_counts[TaskStatus.CANCELLED] == len(tasks):
+            new_status = JobStatus.CANCELLED
+            logger.info(
+                f"Setting job {job_id} status to CANCELLED as all tasks are cancelled"
+            )
+        else:
+            # All tasks must be completed
+            new_status = JobStatus.COMPLETED
+            logger.info(
+                f"Setting job {job_id} status to COMPLETED as all tasks are completed"
+            )
+
+        # Only update if the status has changed
+        if new_status and new_status != job.status:
+            job = await self.job_repository.update_job(
+                job_id=job_id,
+                status=new_status,
+            )
+            logger.info(
+                f"Updated job {job_id} status from {job.status} to {new_status}"
+            )
+
+        return self._job_to_response(job)
+
     def _job_to_response(self, job: Job) -> JobResponse:
         """Convert Job model to JobResponse.
 
