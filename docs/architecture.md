@@ -67,17 +67,17 @@ graph TB
         UI[React Frontend<br/>TypeScript + Material-UI]
         WS[WebSocket Connection]
     end
-    
+
     subgraph "API Layer"
         GW[API Gateway<br/>FastAPI Router]
         AUTH[Authentication<br/>JWT + RBAC]
     end
-    
+
     subgraph "Core Services"
         ORCH[Orchestration Engine<br/>Job Management]
         AI[AI Decision Engine<br/>Rule-based + ML]
     end
-    
+
     subgraph "Security Modules"
         RECON[Reconnaissance<br/>Network Discovery]
         VULN[Vulnerability Scanner<br/>Plugin Architecture]
@@ -85,19 +85,19 @@ graph TB
         POST[Post-Exploitation<br/>Privilege Escalation]
         REPORT[Reporting Engine<br/>HTML/PDF Generation]
     end
-    
+
     subgraph "Data Layer"
         PG[(PostgreSQL<br/>Structured Data)]
         MONGO[(MongoDB<br/>Scan Results)]
         REDIS[(Redis<br/>Cache + Sessions)]
     end
-    
+
     subgraph "Infrastructure"
         DOCKER[Docker Containers]
         K8S[Kubernetes Orchestration]
         MONITOR[Monitoring<br/>Prometheus + Grafana]
     end
-    
+
     UI --> GW
     WS --> GW
     GW --> AUTH
@@ -108,7 +108,7 @@ graph TB
     AI --> EXPLOIT
     AI --> POST
     AI --> REPORT
-    
+
     RECON --> PG
     VULN --> MONGO
     EXPLOIT --> PG
@@ -116,7 +116,7 @@ graph TB
     REPORT --> PG
     ORCH --> REDIS
     AI --> REDIS
-    
+
     DOCKER --> K8S
     K8S --> MONITOR
 ```
@@ -1489,7 +1489,7 @@ services:
       - postgres
       - mongodb
       - redis
-  
+
   postgres:
     image: postgres:14
     environment:
@@ -1498,12 +1498,12 @@ services:
       POSTGRES_PASSWORD: postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
-  
+
   mongodb:
     image: mongo:5
     volumes:
       - mongodb_data:/data/db
-  
+
   redis:
     image: redis:7-alpine
     volumes:

@@ -1049,4 +1049,3 @@ When the user types `*infra-devops-platform`, activate this DevOps Infrastructur
 
 
 ---
-
