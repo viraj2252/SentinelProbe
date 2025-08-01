@@ -317,6 +317,20 @@ This document outlines the implementation and testing tasks for the SentinelProb
 8. Fixed integration tests timing out in CI by adding skipif decorators and increasing the global timeout
 9. Fixed job status synchronization between reconnaissance module and orchestration engine by implementing a mechanism to update job status when all tasks for a job are completed
 
+### Architecture Document Update
+
+- [x] **Completed**: Comprehensive architecture document revision
+  - ✅ Updated to reflect actual codebase structure (`sentinelprobe/` package)
+  - ✅ Corrected tech stack to match reality (React 19, Vite, no Redux)
+  - ✅ Added detailed AI Decision Engine architecture
+  - ✅ Expanded data models to include all security entities
+  - ✅ Updated API specification with comprehensive endpoints
+  - ✅ Added security and compliance framework details
+  - ✅ Included deployment and infrastructure specifications
+  - ✅ Added performance and scalability considerations
+  - ✅ Included monitoring and observability requirements
+  - ✅ Added future enhancement roadmap
+
 ### MVP Completion Status
 
 We have successfully implemented all the core components needed for our MVP:
