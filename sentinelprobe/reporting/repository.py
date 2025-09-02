@@ -188,7 +188,7 @@ class ReportRepository:
         return cast(Optional[Dict[str, Any]], result)
 
     async def save_report_file(
-        self, report_id: int, content: str, report_format: ReportFormat
+        self, report_id: int, content: Any, report_format: ReportFormat
     ) -> str:
         """
         Save report content to a file.
@@ -206,9 +206,15 @@ class ReportRepository:
         filename = f"report_{report_id}.{file_extension}"
         file_path = self.reports_dir / filename
 
-        # Write the content to the file
-        with open(file_path, "w") as f:
-            f.write(content)
+        # Write the content to the file (binary for PDF)
+        if report_format == ReportFormat.PDF and isinstance(
+            content, (bytes, bytearray)
+        ):
+            with open(file_path, "wb") as f:
+                f.write(content)
+        else:
+            with open(file_path, "w") as f:
+                f.write(str(content))
 
         # Update the report record with the file path
         try:
