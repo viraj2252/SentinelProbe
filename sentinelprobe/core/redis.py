@@ -187,3 +187,22 @@ async def delete_hash_field(hash_key: str, field: str) -> int:
     """
     redis_instance = await get_redis_client()
     return await redis_instance.hdel(hash_key, field)  # type: ignore
+
+
+async def publish_event(channel: str, event: Dict[str, Any]) -> int:
+    """Publish an event to a Redis channel.
+
+    Args:
+        channel: Channel name to publish to
+        event: JSON-serializable event payload
+
+    Returns:
+        Number of clients that received the message
+    """
+    redis_instance = await get_redis_client()
+    try:
+        message = json.dumps(event)
+        return await redis_instance.publish(channel, message)  # type: ignore
+    except Exception as e:
+        logger.warning(f"Failed to publish Redis event on {channel}: {e}")
+        return 0

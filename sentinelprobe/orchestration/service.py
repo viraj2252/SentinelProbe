@@ -5,6 +5,7 @@ from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from sentinelprobe.core.logging import get_logger
+from sentinelprobe.core.redis import publish_event
 from sentinelprobe.orchestration.models import (
     Job,
     JobCreate,
@@ -222,6 +223,16 @@ class OrchestrationService:
         await self._ensure_default_tasks(job_id=job_id)
         await self._dispatch_next_task(job_id=job_id)
 
+        # Publish job start event
+        await publish_event(
+            channel="events:jobs",
+            event={
+                "type": "job.started",
+                "job_id": job_id,
+                "status": JobStatus.RUNNING.value,
+            },
+        )
+
         return self._job_to_response(job)
 
     async def _ensure_default_tasks(self, job_id: int) -> None:
@@ -281,6 +292,17 @@ class OrchestrationService:
         )
         logger.info(
             f"Dispatched task {next_task.id} ({next_task.name}) for job {job_id}"
+        )
+        # Publish task dispatched event
+        await publish_event(
+            channel="events:tasks",
+            event={
+                "type": "task.dispatched",
+                "job_id": job_id,
+                "task_id": next_task.id,
+                "name": next_task.name,
+                "status": TaskStatus.RUNNING.value,
+            },
         )
 
     async def cancel_job(self, job_id: int) -> Optional[JobResponse]:
