@@ -591,22 +591,22 @@ These tests help ensure that the different components of SentinelProbe work toge
 ## Corrections & Action Items (Architecture/PRD Audit)
 
 - Reporting Engine
-  - Gap: `_collect_report_data` uses placeholders; no real aggregation from vulnerabilities/recon.
+  - Done: Real aggregation implemented in ReportingService._collect_report_data
   - Action: Implement aggregation via `VulnerabilityRepository` and `KnowledgeRepository`; add tests.
-  - Gap: PDF format not implemented (HTML returned).
+  - Done: PDF generation implemented (minimal PDF bytes).
   - Action: Add PDF generation and tests.
-  - Gap: Remediation recommendation generation is minimal.
+  - Done: Rule-based remediation recommendations implemented.
   - Action: Implement rule-based recommendations.
 - Orchestration Engine
-  - Gap: `start_job` lacks dispatcher/scheduler; only sets RUNNING.
+  - Done: Default task plan and dispatcher implemented in start_job.
   - Action: Implement task creation and dispatch to Recon/Scanner/Exploitation; update job status hooks.
 - Event Notification System
-  - Gap: No event bus or WebSocket endpoints in API.
+  - Done: Redis pub/sub publishing and WebSocket streaming endpoints added.
   - Action: Implement Redis pub/sub or WebSockets for job/task updates and tests.
 
 ### Implementation Tasks (next sprint)
-- [ ] Reporting: real aggregation of vulnerabilities and recon data
-- [ ] Reporting: PDF generation path with library integration
-- [ ] Reporting: remediation recommendation generation
-- [ ] Orchestration: execution/dispatch and job status updates
-- [ ] Events: pub/sub or WebSocket notifications for live updates
+- [x] Reporting: real aggregation of vulnerabilities and recon data
+- [x] Reporting: PDF generation path with library integration
+- [x] Reporting: remediation recommendation generation
+- [x] Orchestration: execution/dispatch and job status updates
+- [x] Events: pub/sub or WebSocket notifications for live updates
