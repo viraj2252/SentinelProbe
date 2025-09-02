@@ -397,6 +397,39 @@ class ReportingService:
                     lines.append(f"- {finding}")
                 lines.append("")
 
+        # Surface recommendations if present in metadata
+        recommendations = None
+        if report_data.metadata and isinstance(report_data.metadata, dict):
+            recommendations = report_data.metadata.get("recommendations")
+        if recommendations and isinstance(recommendations, dict):
+            actions = recommendations.get("actions", [])
+            by_finding = recommendations.get("by_finding", [])
+
+            lines.append("RECOMMENDATIONS")
+            lines.append("-" * 80)
+
+            if actions:
+                lines.append("Prioritized Actions:")
+                for item in actions[:15]:
+                    action = item.get("action")
+                    score = item.get("score")
+                    if action is not None:
+                        if score is not None:
+                            lines.append(f"- {action} (score: {score})")
+                        else:
+                            lines.append(f"- {action}")
+                lines.append("")
+
+            if by_finding:
+                lines.append("Per-Finding Guidance:")
+                for bf in by_finding[:10]:
+                    title = bf.get("title", "Unknown finding")
+                    sev = bf.get("severity", "unknown")
+                    lines.append(f"- {title} [{sev}]")
+                    for a in bf.get("actions", [])[:5]:
+                        lines.append(f"  • {a}")
+                lines.append("")
+
         lines.append("=" * 80)
         lines.append(f"Report generated on: {report_data.created_at}")
         lines.append("=" * 80)
@@ -526,6 +559,46 @@ class ReportingService:
                 for finding in priority_findings:
                     html.append(f"<li>{finding}</li>")
                 html.append("</ul>")
+
+            html.append("</div>")
+
+        # Surface recommendations if present in metadata
+        recommendations = None
+        if report_data.metadata and isinstance(report_data.metadata, dict):
+            recommendations = report_data.metadata.get("recommendations")
+        if recommendations and isinstance(recommendations, dict):
+            actions = recommendations.get("actions", [])
+            by_finding = recommendations.get("by_finding", [])
+
+            html.append(
+                """
+                <div class="section">
+                    <h2>Recommendations</h2>
+            """
+            )
+
+            if actions:
+                html.append("<h3>Prioritized Actions</h3><ul>")
+                for item in actions[:15]:
+                    action = item.get("action")
+                    score = item.get("score")
+                    if action is None:
+                        continue
+                    if score is not None:
+                        html.append(f"<li>{action} <em>(score: {score})</em></li>")
+                    else:
+                        html.append(f"<li>{action}</li>")
+                html.append("</ul>")
+
+            if by_finding:
+                html.append("<h3>Per-Finding Guidance</h3>")
+                for bf in by_finding[:10]:
+                    title = bf.get("title", "Unknown finding")
+                    sev = bf.get("severity", "unknown")
+                    html.append(f"<p><strong>{title}</strong> [{sev}]</p><ul>")
+                    for a in bf.get("actions", [])[:5]:
+                        html.append(f"<li>{a}</li>")
+                    html.append("</ul>")
 
             html.append("</div>")
 
