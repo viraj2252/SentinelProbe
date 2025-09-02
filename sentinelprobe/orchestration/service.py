@@ -210,6 +210,7 @@ class OrchestrationService:
         Returns:
             Optional[JobResponse]: Updated job or None.
         """
+        # Mark job as running
         job = await self.job_repository.update_job(
             job_id=job_id,
             status=JobStatus.RUNNING,
@@ -217,10 +218,70 @@ class OrchestrationService:
         if not job:
             return None
 
-        # TODO: Implement actual job execution logic
-        # This would involve creating tasks and dispatching them to appropriate modules
+        # Create default task plan if none exist and dispatch the first step
+        await self._ensure_default_tasks(job_id=job_id)
+        await self._dispatch_next_task(job_id=job_id)
 
         return self._job_to_response(job)
+
+    async def _ensure_default_tasks(self, job_id: int) -> None:
+        """Ensure a default set of tasks exists for the job.
+
+        Creates a standard sequence if no tasks exist yet: Reconnaissance → Vulnerability Scan
+        → Exploitation (optional) → Reporting.
+        """
+        existing = await self.task_repository.get_tasks_by_job(job_id)
+        if existing:
+            return
+
+        default_tasks: List[TaskCreate] = [
+            TaskCreate(
+                job_id=job_id,
+                name="Reconnaissance",
+                description="Discover targets, ports and services",
+            ),
+            TaskCreate(
+                job_id=job_id,
+                name="Vulnerability Scan",
+                description="Scan discovered services for vulnerabilities",
+            ),
+            TaskCreate(
+                job_id=job_id,
+                name="Exploitation",
+                description="Safely validate critical issues",
+            ),
+            TaskCreate(
+                job_id=job_id,
+                name="Reporting",
+                description="Aggregate findings and generate report",
+            ),
+        ]
+
+        for t in default_tasks:
+            await self.task_repository.create_task(
+                job_id=t.job_id, name=t.name, description=t.description
+            )
+
+    async def _dispatch_next_task(self, job_id: int) -> None:
+        """Pick the next pending task for a job and mark it running.
+
+        In a full implementation, this would enqueue work for the responsible module.
+        """
+        tasks = await self.task_repository.get_tasks_by_job(job_id)
+        # If any task is RUNNING, a dispatcher already picked it up
+        if any(t.status == TaskStatus.RUNNING for t in tasks):
+            return
+        # Find the first pending task in the predefined order
+        pending = [t for t in tasks if t.status == TaskStatus.PENDING]
+        if not pending:
+            return
+        next_task = pending[0]
+        await self.task_repository.update_task(
+            task_id=next_task.id, status=TaskStatus.RUNNING
+        )
+        logger.info(
+            f"Dispatched task {next_task.id} ({next_task.name}) for job {job_id}"
+        )
 
     async def cancel_job(self, job_id: int) -> Optional[JobResponse]:
         """Cancel a job.
