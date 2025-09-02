@@ -21,6 +21,7 @@ loguru = "^0.7.2"
 tenacity = "^8.2.3"
 requests = "^2.31.0"
 aiosqlite = "^0.21.0"
+alembic = "^1.16.5"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.2"

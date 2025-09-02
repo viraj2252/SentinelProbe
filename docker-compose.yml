@@ -30,7 +30,7 @@ services:
         echo 'Waiting for redis...'
         sleep 1
       done &&
-      python -m sentinelprobe"
+      python -m sentinelprobe migrate && python -m sentinelprobe run"
 
   postgres:
     image: postgres:14

@@ -2,6 +2,7 @@
 
 import argparse
 import asyncio
+import os
 from argparse import ArgumentParser, Namespace, _SubParsersAction
 from typing import cast
 
@@ -38,7 +39,17 @@ def run_app(args: Namespace) -> None:
     """Run the application."""
     configure_logging()
     logger.info("Starting SentinelProbe application")
-    # Implementation will be added later
+    # Start FastAPI via uvicorn
+    try:
+        import uvicorn
+
+        host = os.getenv("HOST", "0.0.0.0")
+        port_str = os.getenv("PORT", "8000")
+        port = int(port_str) if port_str.isdigit() else 8000
+        uvicorn.run("sentinelprobe.api.app:app", host=host, port=port, log_level="info")
+    except Exception as e:
+        logger.error(f"Failed to start API: {e}")
+        raise
 
 
 async def _run_migrations_async(action: str) -> None:
@@ -70,7 +81,8 @@ def run_migrations(args: Namespace) -> None:
     """
     configure_logging()
 
-    action = getattr(args, "action", "upgrade")  # Default to upgrade if not specified
+    # Default to 'upgrade' when action flag is omitted or parsed as None
+    action = getattr(args, "action", None) or "upgrade"
 
     # Run migrations asynchronously
     asyncio.run(_run_migrations_async(action))
