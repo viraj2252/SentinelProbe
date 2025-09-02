@@ -245,7 +245,9 @@ class ReportingService:
             findings=findings,
             reconnaissance_data=recon_data,
             remediation_summary=self._generate_remediation_summary(findings),
-            metadata=report.metadata,
+            metadata=self._attach_recommendations_metadata(
+                report.metadata, self.generate_recommendations_for_findings(findings)
+            ),
             created_at=datetime.utcnow(),
         )
 
@@ -584,6 +586,103 @@ class ReportingService:
         # Not maintaining accurate byte offsets for simplicity; many parsers accept linearized no-xref PDFs
         out += b"trailer<< /Root 1 0 R >>\nstartxref\n0\n%%EOF\n"
         return out
+
+    def _attach_recommendations_metadata(
+        self, metadata: Optional[Dict[str, Any]], recommendations: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Return metadata with recommendations merged in under 'recommendations'."""
+        base: Dict[str, Any] = metadata.copy() if isinstance(metadata, dict) else {}
+        base["recommendations"] = recommendations
+        return base
+
+    def generate_recommendations_for_findings(
+        self, findings: List[VulnerabilityFindings]
+    ) -> Dict[str, Any]:
+        """Generate rule-based remediation recommendations for given findings.
+
+        Returns a structure with prioritized actions and per-finding guidance.
+        """
+        if not findings:
+            return {"actions": [], "by_finding": []}
+
+        # Severity weights for prioritization
+        sev_weight = {
+            SeverityLevel.CRITICAL: 5,
+            SeverityLevel.HIGH: 4,
+            SeverityLevel.MEDIUM: 3,
+            SeverityLevel.LOW: 2,
+            SeverityLevel.INFO: 1,
+        }
+
+        def _suggest_for_title(title: str) -> List[str]:
+            t = title.lower()
+            recs: List[str] = []
+            if "ssh" in t:
+                recs += [
+                    "Disable root login in SSH config",
+                    "Disable weak ciphers/MACs and enforce strong key exchange",
+                ]
+            if "mongodb" in t:
+                recs += [
+                    "Enable MongoDB authentication and role-based access control",
+                    "Bind MongoDB to localhost or limit exposure via firewall",
+                ]
+            if "tls 1.0" in t or "tls1.0" in t:
+                recs.append("Disable TLS 1.0 and 1.1; require TLS 1.2+")
+            if "information disclosure" in t or "server information" in t:
+                recs.append("Hide server version headers and banner information")
+            if "sql" in t and "injection" in t:
+                recs.append("Use parameterized queries and input validation")
+            if "redis" in t:
+                recs += [
+                    "Require Redis authentication and restrict network access",
+                    "Disable protected mode if properly firewalled or keep enabled",
+                ]
+            return recs
+
+        def _generic_recs() -> List[str]:
+            return [
+                "Apply vendor patches and update affected software",
+                "Restrict network access to critical services via firewall",
+                "Enable logging and monitoring for suspicious activity",
+                "Implement least-privilege for service accounts",
+            ]
+
+        by_finding: List[Dict[str, Any]] = []
+        agg_action_scores: Dict[str, int] = {}
+
+        for f in findings:
+            title = f.title
+            sev = f.severity
+            weight = sev_weight.get(sev, 1)
+            recs = _suggest_for_title(title) or []
+            # If no specific recs, add generic
+            if not recs:
+                recs = _generic_recs()
+
+            # Track per finding
+            by_finding.append(
+                {
+                    "id": f.id,
+                    "title": title,
+                    "severity": sev.value,
+                    "actions": recs,
+                }
+            )
+
+            # Aggregate actions with severity weight for prioritization
+            for a in recs:
+                agg_action_scores[a] = agg_action_scores.get(a, 0) + weight
+
+        # Sort actions by score desc
+        prioritized_actions = [
+            {"action": action, "score": score}
+            for action, score in sorted(
+                agg_action_scores.items(), key=lambda kv: kv[1], reverse=True
+            )
+        ]
+
+        return {"actions": prioritized_actions, "by_finding": by_finding}
 
     async def get_report_file_path(self, report_id: int) -> Optional[str]:
         """
