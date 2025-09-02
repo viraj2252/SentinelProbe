@@ -8,14 +8,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from sentinelprobe.ai_decision.repository import KnowledgeRepository
 from sentinelprobe.orchestration.repository import JobRepository
+from sentinelprobe.reconnaissance.repository import (
+    PortRepository,
+    ServiceRepository,
+    TargetRepository,
+)
 from sentinelprobe.reporting.models import (
     ReportData,
     ReportFormat,
     ReportRequest,
     ReportStatus,
+    SeverityLevel,
     VulnerabilityFindings,
 )
 from sentinelprobe.reporting.repository import ReportRepository
+from sentinelprobe.vulnerability_scanner.models import VulnerabilitySeverity
 from sentinelprobe.vulnerability_scanner.repository import VulnerabilityRepository
 
 
@@ -24,28 +31,28 @@ class ReportingService:
 
     def __init__(
         self,
+        session: AsyncSession,
         report_repository: Optional[ReportRepository] = None,
         job_repository: Optional[JobRepository] = None,
         vulnerability_repository: Optional[VulnerabilityRepository] = None,
         knowledge_repository: Optional[KnowledgeRepository] = None,
     ):
         """Initialize reporting service."""
-        self.session: Optional[AsyncSession] = None
-        self.report_repository = report_repository or ReportRepository()
-        self.job_repository = job_repository or JobRepository(self._get_session())
+        self.session: AsyncSession = session
+        self.report_repository = report_repository or ReportRepository(session)
+        self.job_repository = job_repository or JobRepository(session)
         self.vulnerability_repository = vulnerability_repository or (
-            VulnerabilityRepository(self._get_session())
+            VulnerabilityRepository(session)
         )
         self.knowledge_repository = knowledge_repository or (
-            KnowledgeRepository(self._get_session())
+            KnowledgeRepository(session)
         )
+        # Recon repositories for assembling reconnaissance data
+        self.target_repository = TargetRepository(session)
+        self.port_repository = PortRepository(session)
+        self.service_repository = ServiceRepository(session)
 
-    def _get_session(self) -> AsyncSession:
-        """Get a session for repositories."""
-        # This is a placeholder - in a real implementation, we would use a
-        # proper session. For now, we'll return None and let the repositories
-        # create their own sessions
-        return cast(AsyncSession, None)
+    # _get_session helper no longer needed as session is injected
 
     async def create_report(self, request: ReportRequest) -> int:
         """
@@ -134,39 +141,98 @@ class ReportingService:
         if not job:
             raise ValueError(f"Job with ID {report.job_id} not found")
 
-        # Get vulnerability findings
-        # In a real implementation, we would use the actual method
-        # For now, we'll use an empty list as a placeholder
-        vulnerabilities: List[Any] = []  # await self.vulnerability_repository...
+        # Collect reconnaissance-related context
+        targets = await self.target_repository.get_targets_by_job(report.job_id)
 
-        # Format vulnerability findings
-        findings = []
-        for vuln in vulnerabilities:
-            finding = VulnerabilityFindings(
-                id=vuln.id,
-                title=vuln.title,
-                description=vuln.description,
-                severity=vuln.severity,
-                cvss_score=vuln.cvss_score,
-                cve_id=vuln.cve_id,
-                affected_targets=[
-                    {
-                        "ip": target.ip_address,
-                        "port": target.port,
-                        "service": target.service,
-                    }
-                    for target in vuln.affected_targets
-                ],
-                remediation_steps=vuln.remediation_steps,
-                references=vuln.references,
-                metadata=vuln.metadata,
+        recon_data: Dict[str, Any] = {"targets": []}
+        for t in targets:
+            # Ports and services per target
+            ports = await self.port_repository.get_ports_by_target(t.id)
+            services: List[Dict[str, Any]] = []
+            for p in ports:
+                svc = await self.service_repository.get_service_by_port(p.id)
+                if svc:
+                    services.append(
+                        {
+                            "port": p.port_number,
+                            "protocol": p.protocol,
+                            "service_type": svc.service_type.value,
+                            "name": svc.name,
+                            "version": svc.version or "",
+                        }
+                    )
+            recon_data["targets"].append(
+                {
+                    "id": t.id,
+                    "hostname": t.hostname,
+                    "ip_address": t.ip_address,
+                    "status": t.status.value,
+                    "open_ports": [
+                        p.port_number
+                        for p in ports
+                        if str(p.status.value).lower() != "closed"
+                    ],
+                    "services": services,
+                }
             )
-            findings.append(finding)
 
-        # Get reconnaissance data from knowledge repository
-        # In a real implementation, we would use the actual method
-        # For now, we'll use an empty dict as a placeholder
-        recon_data: Dict[str, Any] = {}  # await self.knowledge_repository...
+        # Collect vulnerabilities per target for this job
+        findings: List[VulnerabilityFindings] = []
+        severity_map = {
+            VulnerabilitySeverity.CRITICAL: SeverityLevel.CRITICAL,
+            VulnerabilitySeverity.HIGH: SeverityLevel.HIGH,
+            VulnerabilitySeverity.MEDIUM: SeverityLevel.MEDIUM,
+            VulnerabilitySeverity.LOW: SeverityLevel.LOW,
+            VulnerabilitySeverity.INFO: SeverityLevel.INFO,
+        }
+
+        for t in targets:
+            vulns = await self.vulnerability_repository.get_vulnerabilities_by_target(
+                t.id
+            )
+            for v in vulns:
+                # Resolve affected target details
+                port_info: Optional[Dict[str, Any]] = None
+                if v.port_number is not None and v.protocol:
+                    port = await self.port_repository.get_port_by_number(
+                        t.id, int(v.port_number), v.protocol
+                    )
+                    if port:
+                        svc = await self.service_repository.get_service_by_port(port.id)
+                        port_info = {
+                            "ip": t.ip_address,
+                            "port": port.port_number,
+                            "service": svc.name if svc else None,
+                        }
+                affected_targets = (
+                    [port_info]
+                    if port_info
+                    else [{"ip": t.ip_address, "port": v.port_number, "service": None}]
+                )
+
+                references = None
+                if v.details and isinstance(v.details, dict):
+                    refs = v.details.get("references")
+                    if isinstance(refs, list):
+                        references = refs
+
+                remediation_steps = [v.remediation] if v.remediation else None
+
+                finding = VulnerabilityFindings(
+                    id=int(v.id),
+                    title=v.name,
+                    description=v.description,
+                    severity=severity_map.get(v.severity, SeverityLevel.LOW),
+                    cvss_score=(
+                        float(v.cvss_score) if v.cvss_score is not None else None
+                    ),
+                    cve_id=v.cve_id,
+                    affected_targets=affected_targets,
+                    remediation_steps=remediation_steps,
+                    references=references,
+                    metadata=v.details or {},
+                )
+                findings.append(finding)
 
         # Create report data
         summary = f"Security assessment for job {job.name} (ID: {job.id})"

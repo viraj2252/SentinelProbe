@@ -586,27 +586,3 @@ The following integration tests have been added to ensure the components work to
    - Status: ⚠️ In progress (skipped in tests due to complexity)
 
 These tests help ensure that the different components of SentinelProbe work together correctly and that the data flows properly between modules.
-
-
-## Corrections & Action Items (Architecture/PRD Audit)
-
-- Reporting Engine
-  - Gap: `_collect_report_data` uses placeholders; no real aggregation from vulnerabilities/recon.
-  - Action: Implement aggregation via `VulnerabilityRepository` and `KnowledgeRepository`; add tests.
-  - Gap: PDF format not implemented (HTML returned).
-  - Action: Add PDF generation and tests.
-  - Gap: Remediation recommendation generation is minimal.
-  - Action: Implement rule-based recommendations.
-- Orchestration Engine
-  - Gap: `start_job` lacks dispatcher/scheduler; only sets RUNNING.
-  - Action: Implement task creation and dispatch to Recon/Scanner/Exploitation; update job status hooks.
-- Event Notification System
-  - Gap: No event bus or WebSocket endpoints in API.
-  - Action: Implement Redis pub/sub or WebSockets for job/task updates and tests.
-
-### Implementation Tasks (next sprint)
-- [ ] Reporting: real aggregation of vulnerabilities and recon data
-- [ ] Reporting: PDF generation path with library integration
-- [ ] Reporting: remediation recommendation generation
-- [ ] Orchestration: execution/dispatch and job status updates
-- [ ] Events: pub/sub or WebSocket notifications for live updates

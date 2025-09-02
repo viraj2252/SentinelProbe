@@ -27,7 +27,7 @@ async def create_report(
     Returns:
         Report ID
     """
-    service = ReportingService()
+    service = ReportingService(session)
     report_id = await service.create_report(request)
     return {"report_id": report_id}
 
@@ -47,7 +47,7 @@ async def generate_report(
     Returns:
         Status message
     """
-    service = ReportingService()
+    service = ReportingService(session)
     try:
         file_path = await service.generate_report(report_id)
         return {"status": "success", "file_path": file_path}
@@ -74,7 +74,7 @@ async def get_report_status(
     Returns:
         Report status
     """
-    service = ReportingService()
+    service = ReportingService(session)
     report = await service.report_repository.get_report(report_id)
     if not report:
         raise HTTPException(
@@ -114,7 +114,7 @@ async def get_reports_by_job(
     Returns:
         List of reports
     """
-    service = ReportingService()
+    service = ReportingService(session)
     reports = await service.report_repository.get_reports_by_job(job_id)
 
     return [
@@ -143,7 +143,7 @@ async def delete_report(
         report_id: Report ID
         session: Database session
     """
-    service = ReportingService()
+    service = ReportingService(session)
     success = await service.delete_report(report_id)
     if not success:
         raise HTTPException(
