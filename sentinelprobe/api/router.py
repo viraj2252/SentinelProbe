@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from sentinelprobe.ai_decision.api import router as ai_decision_router
+from sentinelprobe.api.events import router as events_router
 from sentinelprobe.core.config import get_settings
 from sentinelprobe.exploitation.api import router as exploitation_router
 from sentinelprobe.orchestration.api import router as orchestration_router
@@ -26,6 +27,7 @@ api_router.include_router(ai_decision_router)
 api_router.include_router(exploitation_router)
 api_router.include_router(reconnaissance_router)
 api_router.include_router(orchestration_router)
+api_router.include_router(events_router)
 
 # Add more routers as they are implemented
 # api_router.include_router(reconnaissance_router)
