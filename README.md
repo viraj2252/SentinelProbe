@@ -29,6 +29,48 @@ The system consists of the following core components:
 - **Reporting Engine**: Generates comprehensive security reports
 - **Learning Module**: Improves system performance over time
 
+## Quick Start
+
+### Sample Reconnaissance Sequence
+
+Here's a complete example of how to perform reconnaissance on a target:
+
+```bash
+# 1. Start the application (using Docker)
+docker-compose up -d
+
+# 2. Check application health
+curl -s http://localhost:8000/api/v1/health
+
+# 3. Create a reconnaissance job
+JOB_ID=$(curl -s http://localhost:8000/api/v1/orchestration/jobs \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Sample Recon Job","job_type":"scan","target":"example.com","description":"Sample reconnaissance scan"}' \
+  | python -c "import sys,json; print(json.load(sys.stdin)['id'])")
+
+# 4. Add a target to the job
+TARGET_ID=$(curl -s http://localhost:8000/api/v1/reconnaissance/targets \
+  -H 'Content-Type: application/json' \
+  -d "{\"job_id\":$JOB_ID,\"hostname\":\"example.com\"}" \
+  | python -c "import sys,json; print(json.load(sys.stdin)['id'])")
+
+# 5. Run a non-aggressive web scan
+curl -s -X POST "http://localhost:8000/api/v1/reconnaissance/targets/$TARGET_ID/full-scan?scan_type=web&aggressive_mode=false"
+
+# 6. View discovered open ports
+curl -s "http://localhost:8000/api/v1/reconnaissance/targets/$TARGET_ID/ports" \
+  | python -c "import sys,json; data=json.load(sys.stdin); [print(f'Port {p[\"port_number\"]}/{p[\"protocol\"]}: {p[\"status\"]}') for p in data]"
+
+# 7. Generate a report
+REPORT_ID=$(curl -s http://localhost:8000/api/v1/reporting/reports \
+  -H 'Content-Type: application/json' \
+  -d "{\"job_id\":$JOB_ID,\"format\":\"html\"}" \
+  | python -c "import sys,json; print(json.load(sys.stdin)['id'])")
+
+# 8. Download the report
+curl -s "http://localhost:8000/api/v1/reporting/reports/$REPORT_ID/download" -o report.html
+```
+
 ## Installation
 
 ### Prerequisites
