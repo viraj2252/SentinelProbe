@@ -122,6 +122,47 @@ This document outlines the implementation and testing tasks for the SentinelProb
 - [x] **Test**: Verify real-time data availability
 
 ### 3.3 AI Enhancement - First Iteration
+## Reconnaissance Enhancements - API & OSINT
+
+### Passive OSINT Collectors
+- [ ] Implement Google/GitHub dorking collectors (OpenAPI, keys/tokens, auth headers)
+- [ ] Add Certificate Transparency (crt.sh/Censys) subdomain + API host discovery
+- [ ] Integrate Wayback Machine harvesting for historical API specs/routes
+- [ ] Optional: Shodan/Censys queries for exposed API tech; ingest to Knowledge Repo
+- [ ] Optional: TruffleHog/Gitleaks secrets scan with de-dup and hashing
+- [ ] Add Sublist3r + assetfinder subprocess collectors
+- [ ] Add SecurityTrails/VirusTotal API collectors (feature-flagged)
+
+### Active API Discovery
+- [ ] Add Kiterunner wrapper (routes-large.kite) with evidence capture
+- [ ] Add Gobuster/ffuf wrappers with API-focused wordlists
+- [ ] Probe common spec paths (/swagger.json, /openapi.json, /api-docs)
+- [ ] Enumerate GraphQL introspection, gRPC reflection, and SOAP/WSDL endpoints
+- [ ] Implement httpx-based header/CORS/auth scheme fingerprinting
+- [ ] Add Amass (active) + dnsx/MassDNS validation flow
+- [ ] Add naabu port scan and httpx live-host/tech identification
+- [ ] Add gau/waybackurls + katana ingestion and /api/* filtering
+
+### Data Model & Persistence
+- [ ] Add models: DiscoveredEndpoint, SpecReference, LeakedSecret, ServiceFingerprint
+- [ ] Persist OSINT and API findings to Knowledge Repository
+- [ ] Normalize confidence/source metadata for triage
+
+### API & Orchestration
+- [ ] Expose POST /api/recon/passive and /api/recon/active endpoints
+- [ ] Add task budgets, rate limits, API-key vault integration
+- [ ] Add filtering/query for findings (type, risk, source)
+
+### AI/LLM (Feature-flagged)
+- [ ] Dork generator from org/app context
+- [ ] OpenAPI summarizer to extract risky endpoints/auth flows
+- [ ] Secrets/PII triage assistant for OSINT artifacts
+- [ ] Endpoint prediction to seed wordlists
+
+### Pipeline & Orchestration
+- [ ] Encode 5-phase recon pipeline with budgets/rate limits and retries
+- [ ] Add external tool availability checks and fallback paths
+- [ ] Gate premium APIs and heavy scans behind config and scopes
 
 - [x] **Implement**: Vulnerability prioritization algorithms
 - [x] **Test**: Verify risk-based vulnerability ranking
